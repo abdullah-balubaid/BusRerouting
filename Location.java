@@ -21,6 +21,7 @@ public class Location {
         positionX = X;
         positionY = Y;
     }
+    
 
     public void updateLocation(double x, double y){
         positionX = x;

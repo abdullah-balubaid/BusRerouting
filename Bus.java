@@ -16,13 +16,14 @@ import java.util.ArrayList;
 **/
 
 
-public class Bus extends Vehicle {
-    protected ArrayList<Location> route = new ArrayList<Location>();
+public abstract class Bus extends Vehicle {
+    private ArrayList<Location> route = new ArrayList<Location>(); 
 
     private Location lastVisitedStop; // NEW
 
     Bus(int Capacity, int Speed, Color color, ArrayList<Location> route){
         super(Capacity, Speed, color);
+        this.route = route; 
     }
 
     public ArrayList<Location> getRoute() {

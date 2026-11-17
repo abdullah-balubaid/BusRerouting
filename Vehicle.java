@@ -47,8 +47,20 @@ public abstract class Vehicle {
 
     // Setters
     public void updateLocation(Location newLocation){currentLocation.updateLocation(newLocation);}
+    public void updateLocation(double x, double y){currentLocation.updateLocation(x, y);} // NEW
     public void updateDestination(Location newDestination){Destination.updateLocation(newDestination);}
-    public void setCurrentPassengers(int Passengers){currentPassengers = Passengers;}
+    public void updateDestination(double x, double y){Destination.updateLocation(x, y);} // NEW
+    public void setCurrentPassengers(int Passengers){ // NEW
+        if (Passengers <= PASSEGNER_CAPACITY && Passengers > 0){
+        currentPassengers = Passengers;}
+        else if (Passengers > PASSEGNER_CAPACITY) {
+            System.out.println("The vehicle is overfilled.");
+        }
+        else {
+            System.out.println("Invalid number of passengers.");
+        }
+        
+        }
     public void updateMoving(){isMoving = currentLocation != Destination; } // NEW
 
 

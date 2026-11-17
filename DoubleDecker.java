@@ -11,14 +11,13 @@ import java.util.ArrayList;
     *       <p>- Salam Kanno
     *       <p>- Omar AbuSabaah
     * 
-    * @version v1.0 11/16/26
+    * @version v1.0 11/17/26
 
     
 **/
 
-// CHANGE THE CONSTRUCTOR
 public class DoubleDecker extends Bus {
-    DoubleDecker(int Capacity, int Speed, Color color, ArrayList<Location> route){
-        super(Capacity, Speed, color, route);
+    DoubleDecker(Color color, ArrayList<Location> route){
+        super(50, 50, color, route);
     }
 }

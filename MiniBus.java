@@ -11,15 +11,15 @@ import java.util.ArrayList;
     *       <p>- Salam Kanno
     *       <p>- Omar AbuSabaah
     * 
-    * @version v1.0 11/16/26
+    * @version v1.0 11/18/26
 
     
 **/
 
-// CHANGE THE CONSTRUCTOR
 public class MiniBus extends Bus implements Reroutable {
-    MiniBus(int Capacity, int Speed, Color color, ArrayList<Location> route){
-        super(Capacity, Speed, color, route);
+    
+    MiniBus(Color color, ArrayList<Location> route){
+        super(15, 15, color, route);
     }
     
     public void reRoute(){

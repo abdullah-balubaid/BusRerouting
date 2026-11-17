@@ -9,22 +9,36 @@
     *       <p>- Salam Kanno
     *       <p>- Omar AbuSabaah
     * 
-    * @version v1.0 11/16/26
+    * @version v1.0 11/17/26
 
     
 **/
 
 public class BusStop {
     private int waitingPassengers;
-    private long lastRecordedVisit;
+    private long lastRecordedVisit; // UPDATED
     private Location busStopLocation;
 
-    BusStop(Location location){}
+    BusStop(Location location){
+        busStopLocation = location;
+    }
+    BusStop(double x, double y){
+        busStopLocation = new Location(x, y);
+        
+    }
 
-    public int updatePassengers(){return 0;}
-    public void recordVisit(){}
+    public void updatePassengers(int Passengers){
+        waitingPassengers = Passengers;
+
+    }
+
+    public void recordVisit(){
+       lastRecordedVisit = System.currentTimeMillis();
+    }
+
+    // Getters
     public int getPassenger(){return waitingPassengers;}
-    public long getLastVisit(){return lastRecordedVisit;}
+    public long getLastVisit(){return lastRecordedVisit;} // Might be changed
     public Location getLocation(){return busStopLocation;}
 
 
