@@ -24,10 +24,10 @@ public class MiniBus extends Bus implements Reroutable {
     
     @Override 
     public void reRoute(Location newDestination){
-        if (route == null || route.isEmpty()){
+        if (route == null || route.isEmpty()) {
             throw new IllegalArgumentException("New route must not be null or empty.");
         }
-        this.route = new ArrayList<>(route);
+        updateDestination(newDestination);
     }
 
 
