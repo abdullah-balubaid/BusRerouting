@@ -17,7 +17,7 @@ import java.util.ArrayList;
 **/
 
 public class DoubleDecker extends Bus {
-    DoubleDecker(Color color, ArrayList<Location> route){
+    public DoubleDecker(Color color, ArrayList<Location> route){
         super(50, 50, color, route);
     }
 }

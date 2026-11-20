@@ -2,20 +2,20 @@ import java.awt.Color;
 /** 
     * <p> <b>Project Name:</b> Bus Rerouting
     * <p> <b>Class Name:</b> Vehicle
-    * <p> <b>Purpose:</b> Work as an initial mapping of the subclass bus that contains the most important and common datafields / methods.
+    * <p> <b>Purpose:</b> Abstract base class representing a vehicle with capacity, speed, color, passenger count, and movement state.
     * @author 
     *       <p>- Ahmad Balfakeeh  
     *       <p>- Abdullah Balubaid
     *       <p>- Salam Kanno
     *       <p>- Omar AbuSabaah
     * 
-    * @version v1.0 11/16/26
+    * @version v1.1 11/20/26
 
     
 **/
 
 public abstract class Vehicle {
-    private final int PASSEGNER_CAPACITY; 
+    private final int PASSENGER_CAPACITY; 
     private final int SPEED;  
     private Color color;                                            // Used to determine the color of the vehicle.
     private boolean isMoving = false;                               // Used to check whether the vehicle is moving (T) or not (F).
@@ -32,56 +32,81 @@ public abstract class Vehicle {
         * Post-condition: The vehicle object contains the major info regarding its status.
         **/
 
-    Vehicle(int Capacity , int Speed, Color color){
-        PASSEGNER_CAPACITY = Capacity;
-        SPEED = Speed;
-        this.color = color;
+    protected Vehicle(int Capacity , int Speed, Color color){
+        if (Capacity <= 0 || Speed <= 0){
+            throw new IllegalArgumentException("Capacity and speed must be positive.");
+        }
+
+        if (color == null){
+            throw new NullPointerException("The chosen color must be not null.");
+        }
         
+        SPEED = Speed;
+        PASSENGER_CAPACITY = Capacity;
+        this.color = color;
+            
     }
 
     // Checkers
-    public boolean isEmpty(){return currentPassengers == 0;}
-    public boolean isMoving(){return isMoving;}
-    public boolean isFull(){return currentPassengers == PASSEGNER_CAPACITY;}
+    public boolean isEmpty(){ return currentPassengers == 0; }
+    public boolean isMoving(){ return isMoving; }
+    public boolean isFull(){ return currentPassengers == PASSENGER_CAPACITY; }
     
 
     // Setters
-    public void updateLocation(Location newLocation){currentLocation.updateLocation(newLocation);}
-    public void updateLocation(double x, double y){currentLocation.updateLocation(x, y);} // NEW
-    public void updateDestination(Location newDestination){Destination.updateLocation(newDestination);}
-    public void updateDestination(double x, double y){Destination.updateLocation(x, y);} // NEW
-    public void setCurrentPassengers(int Passengers){ // NEW
-        if (Passengers <= PASSEGNER_CAPACITY && Passengers > 0){
-        currentPassengers = Passengers;}
-        else if (Passengers > PASSEGNER_CAPACITY) {
+    public void updateLocation(Location newLocation){
+        currentLocation.updateLocation(newLocation);
+        updateMoving();
+    }
+
+    public void updateLocation(double x, double y){
+        currentLocation.updateLocation(x, y);
+        updateMoving();
+    } // NEW
+
+    public void updateDestination(Location newDestination){
+        Destination.updateLocation(newDestination);
+        updateMoving();
+    }
+
+    public void updateDestination(double x, double y){
+        Destination.updateLocation(x, y);
+        updateMoving();
+    } // NEW
+    
+    public void setCurrentPassengers(int Passengers){ 
+        if (Passengers <= PASSENGER_CAPACITY && Passengers >= 0){
+        currentPassengers = Passengers;
+    }
+        else if (Passengers > PASSENGER_CAPACITY) {
             System.out.println("The vehicle is overfilled.");
         }
         else {
             System.out.println("Invalid number of passengers.");
         }
         
-        }
-    public void updateMoving(){isMoving = currentLocation != Destination; } // NEW
+    } // NEW
+
+    public void updateMoving(){
+        isMoving = currentLocation.getX() != Destination.getX()
+                || currentLocation.getY() != Destination.getY();
+    } // NEW
 
 
     // Getters
-    public int getPassengerCapacity(){return PASSEGNER_CAPACITY;}
-    public int getSpeed(){return SPEED;}
-    public Color getColor(){return this.color;}
-    public int getCurrentPassengers(){return currentPassengers;}
-    public Location getCurrentLocation(){return currentLocation;}
-    public Location getDestination(){return new Location(Destination.getX(), Destination.getY());}
-
-
+    public int getPassengerCapacity(){ return PASSENGER_CAPACITY; }
+    public int getSpeed(){ return SPEED; }
+    public Color getColor(){ return color; }
+    public int getCurrentPassengers(){ return currentPassengers; }
+    
+    public Location getCurrentLocation(){
+        return new Location(currentLocation.getX(), currentLocation.getY());
+    }
+    
+    public Location getDestination(){
+        return new Location(Destination.getX(), Destination.getY());
+    }
     
 }
 
 
-    /**
-     * Finds the smallest element in the range from start to end and returns its position.
-     * @param start The starting index for the search.
-     * @param end The ending index (exclusive) for the search.
-     * Pre-condition: start and end must be valid indices within the array bounds.
-     * Post-condition: Returns the index of the minimum value in the specified range.
-     * @return The index of the smallest element.
-     */
