@@ -19,7 +19,7 @@ import java.util.ArrayList;
 public class MiniBus extends Bus implements Reroutable {
     
     public MiniBus(Color color, ArrayList<Location> route){
-        super(15, 15, color, route);
+        super(15, 35, color, route);
     }
     
     @Override 

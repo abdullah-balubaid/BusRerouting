@@ -18,6 +18,6 @@ import java.util.ArrayList;
 
 public class DoubleDecker extends Bus {
     public DoubleDecker(Color color, ArrayList<Location> route){
-        super(50, 50, color, route);
+        super(50, 15, color, route);
     }
 }

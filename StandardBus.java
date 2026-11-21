@@ -19,7 +19,7 @@ import java.util.ArrayList;
 
 public class StandardBus extends Bus implements Reroutable {
     public StandardBus(Color color, ArrayList<Location> route){
-        super(30, 30, color, route);
+        super(30, 25, color, route);
     }
 
     @Override 
