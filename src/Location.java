@@ -1,6 +1,6 @@
 /** 
     * <p> <b>Project Name:</b> Bus Rerouting
-    * <p> <b>Class Name:</b> Vehicle
+    * <p> <b>Class Name:</b> Location
     * <p> <b>Purpose:</b> Represents a 2D coordinate point and calculates distance between locations.
     * @author 
     *       <p>- Ahmad Balfakeeh  
