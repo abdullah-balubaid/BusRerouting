@@ -31,7 +31,7 @@ import javafx.scene.image.WritableImage;
 /**
  * <p> <b>Project Name:</b> Bus Rerouting
  * <p> <b>Class Name:</b> Map
- * <p> <b>Purpose:</b> .
+ * <p> <b>Purpose:</b> Create the map, bus stops, busses, move it on the map to the bus stops by connecting the backend logic to the GUI.
  * @author
  *       <p>- Ahmad Balfakeeh
  *       <p>- Abdullah Balubaid
@@ -71,6 +71,11 @@ public class Map extends Application {
     private static final double CELLS_PER_SECOND_PER_SPEED = 0.05;     
     // nextStopIndexes.get(i) = which stop of its route bus i is driving to
     private final List<Integer> nextStopIndexes = new ArrayList<>();
+
+    private static final double LOADING_SECONDS = 1.0;
+    private final List<Double> stopArrivalRates = new ArrayList<>();   // might be moved to another class
+    private final List<Double> stopArrivalProgress = new ArrayList<>(); 
+    private final List<Double> busLoadingSeconds = new ArrayList<>();
 
 
 
@@ -154,6 +159,9 @@ public class Map extends Application {
             stops.add(stop);
         }
 
+        // step 5
+        createArrivalRates();
+
     }
 
     // step 3
@@ -213,6 +221,9 @@ public class Map extends Application {
         }
 
         builtIconSize = -1;
+
+        // step 5
+        resetLoadingTimers();
     }
     
     private void draw() {
@@ -296,7 +307,7 @@ public class Map extends Application {
             double centerY = pointY(location.getY());
             drawStopIcon(drawingBrush, centerX, centerY, unit);
 
-            String text = "Stop" + (i+1) + " [" + stop.getPassenger() + "]";
+            String text = "Stop " + (i+1) + " (" + stop.getPassenger() + ")";
             stopLabel(drawingBrush, text, centerX, centerY - unit * 1.95, NAVY2);
         }
 
@@ -611,9 +622,16 @@ private static final String ICON_DIR = "\"C:\\Users\\abdul\\Downloads\\EE364proj
 
         // step 4
     private void moveBuses(double seconds) {
+        // step 5
+        addNewPassengers(seconds);
+
         for (int i = 0; i < buses.size(); i++) { 
             Bus bus = buses.get(i);
 
+            // step 5
+            if (isLoading(i, seconds)) { continue; }
+
+            // step 4
             double distance = bus.getSpeed() * CELLS_PER_SECOND_PER_SPEED * seconds;
 
             Location currentLocation = bus.getCurrentLocation();
@@ -630,6 +648,7 @@ private static final String ICON_DIR = "\"C:\\Users\\abdul\\Downloads\\EE364proj
             else {
                 x = x + Math.signum(differenceX) * stepX; // if differenceX < 0 --> x = x - stepX
                                                           // if differenceX > 0 --> x = x + stepX
+                                                          // if differenceX = 0 --> x = x
             }
             
             distance = distance - stepX;
@@ -647,6 +666,9 @@ private static final String ICON_DIR = "\"C:\\Users\\abdul\\Downloads\\EE364proj
 
 
             if (x == destination.getX() && y == destination.getY()) {
+                // step 5
+                arriveAtStop(i, bus, destination);
+
                 ArrayList<Location> route = bus.getRoute();
                 int next = (nextStopIndexes.get(i) + 1) % route.size();
                 nextStopIndexes.set(i, next);
@@ -656,6 +678,88 @@ private static final String ICON_DIR = "\"C:\\Users\\abdul\\Downloads\\EE364proj
 
         }
     }
+
+
+// step 5
+
+private void createArrivalRates() {
+    stopArrivalRates.clear();
+    stopArrivalProgress.clear();
+
+    for (int i = 0; i < stops.size(); i++) {
+        stopArrivalRates.add(0.1 + 0.4 * random.nextDouble());
+        stopArrivalProgress.add(0.0);
+        }
+    }
+
+private void resetLoadingTimers() {
+    busLoadingSeconds.clear();
+
+    for (int i = 0; i < buses.size(); i++) {
+        busLoadingSeconds.add(0.0);
+        }
+    }
+
+private void addNewPassengers(double seconds) {
+    for (int i = 0; i < stops.size(); i++) {
+        BusStop stop = stops.get(i);
+
+        double progress = stopArrivalProgress.get(i) + stopArrivalRates.get(i) * seconds;
+        int newPassengers = (int) progress;
+        progress = progress - newPassengers;
+        stopArrivalProgress.set(i, progress);
+
+        if (newPassengers > 0) {
+            stop.updatePassengers(stop.getPassenger() + newPassengers);
+            }
+        }
+    }
+
+
+private boolean isLoading(int busIndex, double seconds) {
+    double secondsLeft = busLoadingSeconds.get(busIndex);
+
+    if (secondsLeft <= 0) {
+        return false;
+        }
+
+    busLoadingSeconds.set(busIndex, secondsLeft - seconds);
+    return true;
+    }
+
+private int findStopIndexAt(Location location) {
+    for (int i = 0; i < stops.size(); i++) {
+        Location stopLocation = stops.get(i).getLocation();
+
+        if (stopLocation.getX() == location.getX() && stopLocation.getY() == location.getY()) {
+            return i;
+            }
+        }
+    return -1;
+    }
+    
+
+private void arriveAtStop(int busIndex, Bus bus, Location stopLocation) {
+    int stopIndex = findStopIndexAt(stopLocation);
+    if (stopIndex == -1) { return; }
+    BusStop stop = stops.get(stopIndex);
+
+    int gettingOff = bus.getCurrentPassengers();
+    bus.setCurrentPassengers(0);
+
+    int waiting = stop.getPassenger();
+    int gettingOn = Math.min(waiting, bus.getPassengerCapacity());
+    bus.setCurrentPassengers(gettingOn);
+    stop.updatePassengers(waiting - gettingOn);
+
+    stop.recordVisit();
+    bus.setLastVisitedStop(stopLocation);
+    busLoadingSeconds.set(busIndex, LOADING_SECONDS);
+
+    System.out.println(busPrefix(bus) + (busIndex + 1) + " at Stop" + (stopIndex + 1) + ": "
+                + gettingOff + " got off, " + gettingOn + " got on, " + stop.getPassenger() + " still waiting");
+
+}
 
 }
 
