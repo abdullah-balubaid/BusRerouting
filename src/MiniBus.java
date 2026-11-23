@@ -11,15 +11,15 @@ import java.util.ArrayList;
     *       <p>- Salam Kanno
     *       <p>- Omar AbuSabaah
     * 
-    * @version v1.1 11/20/26
+    * @version v1.2 11/23/26
 
     
 **/
 
 public class MiniBus extends Bus implements Reroutable {
-    
+
     public MiniBus(Color color, ArrayList<Location> route){
-        super(15, 35, color, route);
+        super(15, 35, color, route, "M");
     }
     
     @Override 
@@ -28,6 +28,11 @@ public class MiniBus extends Bus implements Reroutable {
             throw new IllegalArgumentException("New route must not be null or empty.");
         }
         updateDestination(newDestination);
+    }
+
+    @Override
+    public String getIconFileName() {
+        return "MiniBusIcon.png";
     }
 
 

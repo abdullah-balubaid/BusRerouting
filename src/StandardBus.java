@@ -11,15 +11,16 @@ import java.util.ArrayList;
     *       <p>- Salam Kanno
     *       <p>- Omar AbuSabaah
     * 
-    * @version v1.1 11/20/26
+    * @version v1.2 11/23/26
 
     
 **/
 
 
 public class StandardBus extends Bus implements Reroutable {
+
     public StandardBus(Color color, ArrayList<Location> route){
-        super(30, 25, color, route);
+        super(30, 25, color, route, "S");
     }
 
     @Override 
@@ -28,5 +29,10 @@ public class StandardBus extends Bus implements Reroutable {
             throw new IllegalArgumentException("New route must not be null or empty.");
         }
         updateDestination(newDestination);
+    }
+
+    @Override
+    public String getIconFileName() {
+        return "StandardBusIcon.png";
     }
 }

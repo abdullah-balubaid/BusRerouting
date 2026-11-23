@@ -8,9 +8,6 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.StrokeLineCap;
 import javafx.scene.shape.StrokeLineJoin;
 import javafx.stage.Stage;
-import javafx.scene.text.TextAlignment;
-import javafx.scene.text.Font;
-import javafx.scene.text.FontWeight;
 
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleProperty;
@@ -20,13 +17,10 @@ import java.util.Random;
 import java.util.Collections;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
+
 
 import javafx.scene.image.Image;
-import javafx.scene.image.PixelFormat;
-import javafx.scene.image.WritableImage;
+
 
 /**
  * <p> <b>Project Name:</b> Bus Rerouting
@@ -37,11 +31,14 @@ import javafx.scene.image.WritableImage;
  *       <p>- Abdullah Balubaid
  *       <p>- Salam Kanno
  *       <p>- Omar AbuSabaah
- * @version v1.0 11/22/26
+ * @version v1.1 11/23/26
  */
 
 
 public class Map extends Application {
+    
+    // assets folder directory
+    private static final String ICON_DIR = "\"C:\\Users\\abdul\\Downloads\\EE364project\\assets\""; 
 
     // step 1
     private final Canvas canvas = new Canvas();
@@ -64,7 +61,6 @@ public class Map extends Application {
     private final List<Image> busIcons = new ArrayList<>();
     private double iconSize;
     private int builtIconSize = -1;
-    private File iconFolder;
 
     // step 4
     // StandardBus (speed 30) drives 1.5 cells per second
@@ -73,13 +69,8 @@ public class Map extends Application {
     private final List<Integer> nextStopIndexes = new ArrayList<>();
 
     private static final double LOADING_SECONDS = 1.0;
-    private final List<Double> stopArrivalRates = new ArrayList<>();   // might be moved to another class
-    private final List<Double> stopArrivalProgress = new ArrayList<>(); 
-    private final List<Double> busLoadingSeconds = new ArrayList<>();
 
 
-
-            
     // Color Palette
     private static final Color WHITE = Color.web("#ffffff");
     private static final Color GREY1 = Color.web("#c8c8c8");
@@ -214,8 +205,6 @@ public class Map extends Application {
             int firstDestination = 1 % temporaryRoute.size();
             bus.updateDestination(temporaryRoute.get(firstDestination));
             nextStopIndexes.add(firstDestination);
-
-
             buses.add(bus);
 
         }
@@ -255,13 +244,9 @@ public class Map extends Application {
         drawGrid(drawingBrush, lineWidth);
         // step 4
         drawRoutes(drawingBrush, lineWidth);
-
         drawStops(drawingBrush);
-
         // step 3 (drawn last, so busses are on top of the stops)
         drawBuses(drawingBrush);
-
-        
 
         }
 
@@ -293,290 +278,43 @@ public class Map extends Application {
     private void drawStops(GraphicsContext drawingBrush) {
         double unit = Math.max(7, iconSize * 0.26);
 
-        
-        drawingBrush.setTextAlign(TextAlignment.CENTER);
-        drawingBrush.setFont(Font.font("System", FontWeight.BOLD, 13)); // we can change the font here
-        
-
         // step 3: updates
         for (int i = 0; i < stops.size(); i++) {
             BusStop stop = stops.get(i);
             Location location = stop.getLocation();
-
             double centerX = pointX(location.getX());
             double centerY = pointY(location.getY());
-            drawStopIcon(drawingBrush, centerX, centerY, unit);
+            stop.draw(drawingBrush, i + 1, centerX, centerY, unit,
+                CADETBLUE, ORANGE, NAVY1, NAVY2, WHITE);
 
-            String text = "Stop " + (i+1) + " (" + stop.getPassenger() + ")";
-            stopLabel(drawingBrush, text, centerX, centerY - unit * 1.95, NAVY2);
         }
-
-    }
-        // step 2
-    private void drawStopIcon(GraphicsContext drawingBrush, double centerX, double centerY, double unit) {
-        double poleX = centerX - unit - 3;
-
-        // pole
-        drawingBrush.setLineCap(StrokeLineCap.BUTT);
-        drawingBrush.setStroke(CADETBLUE);
-        drawingBrush.setLineWidth(Math.max(2, unit * 0.2));
-        drawingBrush.strokeLine(poleX, centerY - unit * 1.5, poleX, centerY + unit * 0.9);
-
-        // little orange flag on top of the pole
-        drawingBrush.setFill(ORANGE);
-        drawingBrush.fillRect(poleX - unit * 0.3, centerY - unit * 1.55, unit * 0.65, unit * 0.55);
-
-        // dark sign box with orange border
-        drawingBrush.setFill(NAVY1);
-        drawingBrush.fillRect(centerX - unit, centerY - unit, 2 * unit, 2 * unit);
-        drawingBrush.setStroke(ORANGE);
-        drawingBrush.setLineWidth(2);
-        drawingBrush.strokeRect(centerX - unit, centerY - unit, 2 * unit, 2 * unit);
-
-        // thicker orange bar along the top of the box
-        drawingBrush.setFill(ORANGE);
-        drawingBrush.fillRect(centerX - unit, centerY - unit, 2 * unit, unit * 0.4);
-    }
-        // step 2
-    private void stopLabel(GraphicsContext drawingBrush, String text, double x, double y, Color color) {
-        drawingBrush.setLineWidth(3);
-        drawingBrush.setStroke(WHITE);
-        drawingBrush.strokeText(text, x, y);
-        drawingBrush.setFill(color);
-        drawingBrush.setFill(color);
-        drawingBrush.fillText(text, x, y);
     }
 
     // step 3 - the busses
-
     private void drawBuses(GraphicsContext drawingBrush) {
-        drawingBrush.setTextAlign(TextAlignment.CENTER);
-        drawingBrush.setFont(Font.font("System", FontWeight.BOLD, 12));
-
         for (int i = 0; i < buses.size(); i++) {
             Bus bus = buses.get(i);
             Location location = bus.getCurrentLocation();
-
             double shift = ( (i % 3) - 1) * 6;
             double centerX = pointX(location.getX()) + shift;
             double centerY = pointY(location.getY()) + shift;
-
             Image icon = busIcons.get(i);
-
-            double bottomOfBus;
-            if (icon != null) {
-                drawingBrush.drawImage(icon, centerX - icon.getWidth() / 2, centerY - icon.getHeight() / 2);
-                bottomOfBus = centerY + icon.getHeight() / 2;
-
-            }
-            else {
-                Color busPlaceHolderRect = bus.getColor(); 
-                drawingBrush.setFill(Color.color(busPlaceHolderRect.getRed(), busPlaceHolderRect.getGreen(), busPlaceHolderRect.getBlue()));
-                drawingBrush.fillRect(centerX - iconSize / 2, centerY - iconSize / 2, iconSize, iconSize);
-
-                bottomOfBus = centerY + iconSize / 2;
-            }
-
-            String text = busPrefix(bus) + (i + 1) + " " + bus.getCurrentPassengers() + "/" + bus.getPassengerCapacity();
-            stopLabel(drawingBrush, text, centerX, bottomOfBus + 13, NAVY2);
+            bus.draw(drawingBrush, i + 1, centerX, centerY, iconSize, icon, NAVY2, WHITE);
         }
     }
-        // step 3
-    private String busPrefix(Bus bus) {
-        if (bus instanceof StandardBus)  { return "B"; }
-        if (bus instanceof MiniBus)      { return "M"; }
-        if (bus instanceof DoubleDecker) { return "D"; }
-        return "N/A";
-    }
-        // step 3
-    private String iconFileName(Bus bus) {
-        if (bus instanceof StandardBus)  { return "StandardBusIcon.png"; }
-        if (bus instanceof MiniBus)      { return "MiniBusIcon.png"; }
-        if (bus instanceof DoubleDecker) { return "DoubleDeckerIcon.png"; }
-        return "N/A";
-    }
+    
         // step 3 
     private void buildBusIcons() {
         busIcons.clear();
         int size = (int) iconSize;  
-     
+        File workingFolder = new File(System.getProperty("user.dir"));
+
         for (Bus bus : buses) {
-            busIcons.add(makeBusIcon(bus, size));
+            busIcons.add(bus.makeBusIcon(ICON_DIR, workingFolder, size));
         }
+        
         builtIconSize = size;
     
-    }
-
-        // step 3
-    private Image makeBusIcon(Bus bus, int size) {
-        File file = findFile(iconFileName(bus));
-        if (file == null) {
-            System.out.println("Icon not found: " + iconFileName(bus));
-            return null;
-        }
-
-        Image picture;
-        // try with resource
-        try (InputStream stream = new FileInputStream(file)) {
-
-        picture = new Image(stream, size, size, true, true);
-        
-        } 
-
-        catch (IOException e) {
-            return null;
-        }
-
-        if (picture.isError()) { return null; }
-
-        return paintBus(picture, bus.getColor());
-
-    }
-
-    private Image paintBus(Image picture, Color busColor) {
-        int   width =  (int) picture.getWidth();
-        int   height = (int) picture.getHeight();
-        int totalPixels = width * height;
-        int[] pixels = new int[totalPixels];
-
-        picture.getPixelReader().getPixels(0, 0, width, height, PixelFormat.getIntArgbInstance(), pixels, 0, width);
-        
-
-        boolean[] outside = new boolean[totalPixels]; 
-        int[] toVisit = new int[totalPixels];
-        int toVisitCount = 0;
-        for (int i = 0; i < totalPixels; i++) {
-            int x = i % width;
-            int y = i / width;
-
-            boolean onBorder = ( x == 0 || y == 0 || x == width - 1 || y == height - 1);
-            
-            if ( onBorder && alphaOf(pixels[i]) < 128) {
-                outside[i] = true;
-                toVisit[toVisitCount++] = i;
-            }
-
-        }
-
-        while (toVisitCount > 0) {
-            int i = toVisit[--toVisitCount];
-            int x = i % width;
-            int y = i / width;
-            int next;
-            
-            next = i - 1;
-            if (x > 0 && !outside[next] && alphaOf(pixels[next]) < 128) {
-                outside[next] = true;
-                toVisit[toVisitCount++] = next;
-            }
-
-            next = i + 1;
-            if (x < width - 1 && !outside[next] && alphaOf(pixels[next]) < 128) {
-                outside[next] = true;
-                toVisit[toVisitCount++] = next;
-            }
-
-            next = i - width;
-            if (y > 0 && !outside[next] && alphaOf(pixels[next]) < 128) {
-                outside[next] = true;
-                toVisit[toVisitCount++] = next;
-            }
-
-            next = i + width;
-            if (y < height - 1 && !outside[next] && alphaOf(pixels[next]) < 128) {
-                outside[next] = true;
-                toVisit[toVisitCount++] = next;
-            }
-        }
-
-
-        int[] painted = new int[totalPixels];
-        for (int i = 0; i < totalPixels; i++) {
-            int x = i % width;
-            int y = i / width;
-            int alpha = alphaOf(pixels[i]);
-
-            boolean touchesOutside = (x > 0 && outside[i - 1] || (x < width - 1 && outside[i + 1])
-                                    || (y > 0 && outside[i - width]) || (y < height - 1 && outside[i + width]));
-       
-            int newAlpha;
-            double shade;
-            if (outside[i] || touchesOutside) {
-                newAlpha = alpha;
-                shade = 1;
-            }
-
-            else {
-                newAlpha = 255;
-                shade = alpha / 255.0;
-            }
-
-            int red =   (int) (busColor.getRed()   * shade * 255);
-            int green = (int) (busColor.getGreen() * shade * 255);
-            int blue =  (int) (busColor.getBlue()  * shade * 255);
-            painted[i] = (newAlpha << 24) | (red << 16) | (green << 8) | blue;
-
-         }
-
-         WritableImage result = new WritableImage(width, height);
-         result.getPixelWriter().setPixels(0, 0, width, height, PixelFormat.getIntArgbInstance(), painted, 0, width);
-         return result;
-    
-    }
-
-    private int alphaOf(int pixel) {
-        return (pixel >>> 24) & 255;
-    }
-
-    
-private static final String ICON_DIR = "\"C:\\Users\\abdul\\Downloads\\EE364project\\assets\""; 
-
-    private File findFile(String fileName) {
-        File folder = (iconFolder != null) ? iconFolder : new File(ICON_DIR);
-        File file = new File(folder, fileName);
-
-        if (file.isFile()) {
-            iconFolder = folder;
-            return file;
-        }
-
-        File workingFolder = new File(System.getProperty("user.dir"));
-        File rootFile = new File(workingFolder, fileName);
-        if (rootFile.isFile()) {
-            iconFolder = workingFolder;
-            return rootFile;
-        }
-
-        File found = searchFolder(workingFolder, fileName, 4);
-        if (found != null) {
-            iconFolder = found.getParentFile();
-            return found;
-        }
-        return null;
-    
-    }
-
-    private File searchFolder(File folder, String fileName, int depthLeft) {
-        File[] items = (folder == null) ? null: folder.listFiles();
-
-        if (items == null || depthLeft < 0) { return null; };
-
-        for (File item : items) {
-            if (item.isFile() && item.getName().equalsIgnoreCase(fileName)) { return item; }
-        }
-        
-        for (File item : items) {
-            if (item.isDirectory() && !item.getName().startsWith(".")) {
-                File found = searchFolder(item, fileName, depthLeft - 1);
-            
-                if (found != null) {
-                    return found;
-                }
-            }
-        }
-
-        return null;
-
     }
 
     // step 4
@@ -585,181 +323,85 @@ private static final String ICON_DIR = "\"C:\\Users\\abdul\\Downloads\\EE364proj
     }
 
     private void drawRoutes(GraphicsContext drawingBrush, double lineWidth) {
-
-        drawingBrush.setLineCap(StrokeLineCap.ROUND);
-        drawingBrush.setLineWidth(lineWidth * 0.5);
-
-        for (int i = 0; i < buses.size(); i++){
+        for (int i = 0; i < buses.size(); i++) {
             Bus bus = buses.get(i);
-            ArrayList<Location> route = bus.getRoute();
-            
             double shift = shiftOf(i);
-            Color busColor = bus.getColor();
-
-            drawingBrush.setStroke(Color.color(busColor.getRed(), busColor.getGreen(), busColor.getBlue(), 0.8));
-
-            if (bus instanceof Reroutable) {
-                drawingBrush.setLineDashes(12, 8);
-            }
-
-            for (int j = 0; j < route.size(); j ++) {
-                Location from = route.get(j);
-                Location to   = route.get((j + 1) % route.size());
-
-                double fromX = pointX(from.getX()) + shift;
-                double fromY = pointY(from.getY()) + shift;
-                double toX   = pointX(to.getX())   + shift;
-                double toY   = pointY(to.getY())   + shift;
-
-                drawingBrush.strokeLine(fromX, fromY, toX, fromY);
-                drawingBrush.strokeLine(toX,   fromY, toX, toY);
-            }
-
-            drawingBrush.setLineDashes((double[]) null);
-
+            bus.drawRoute(drawingBrush, lineWidth, shift, this::pointX, this::pointY);
         }
     }
 
         // step 4
     private void moveBuses(double seconds) {
-        // step 5
         addNewPassengers(seconds);
 
-        for (int i = 0; i < buses.size(); i++) { 
+        for (int i = 0; i < buses.size(); i++) {
             Bus bus = buses.get(i);
 
-            // step 5
-            if (isLoading(i, seconds)) { continue; }
+            if (bus.isLoading(seconds)) {
+                continue;
+            }
 
-            // step 4
             double distance = bus.getSpeed() * CELLS_PER_SECOND_PER_SPEED * seconds;
+            bus.moveTowardDestination(distance);
 
             Location currentLocation = bus.getCurrentLocation();
-            Location destination     = bus.getDestination();
-            double x = currentLocation.getX();
-            double y = currentLocation.getY();
+            Location destination = bus.getDestination();
 
-            // ?????
-            double differenceX = destination.getX() - x;
-            double stepX = Math.min(distance, Math.abs(differenceX));
-            if (stepX == Math.abs(differenceX)) { // CHECK LATER IF ISSUE OCCURRED
-                x = destination.getX();
-            }
-            else {
-                x = x + Math.signum(differenceX) * stepX; // if differenceX < 0 --> x = x - stepX
-                                                          // if differenceX > 0 --> x = x + stepX
-                                                          // if differenceX = 0 --> x = x
-            }
-            
-            distance = distance - stepX;
-
-            double differenceY = destination.getY() - y;
-            double stepY = Math.min(distance, Math.abs(differenceY));
-            if (stepY == Math.abs(differenceY)) {
-                y = destination.getY();
-            }
-            else {
-                y = y + Math.signum(differenceY) * stepY;
-            }
-
-            bus.updateLocation(x, y);
-
-
-            if (x == destination.getX() && y == destination.getY()) {
-                // step 5
+            if (currentLocation.getX() == destination.getX()
+                    && currentLocation.getY() == destination.getY()) {
                 arriveAtStop(i, bus, destination);
 
                 ArrayList<Location> route = bus.getRoute();
                 int next = (nextStopIndexes.get(i) + 1) % route.size();
                 nextStopIndexes.set(i, next);
                 bus.updateDestination(route.get(next));
-                
-            }
-
-        }
-    }
-
-
-// step 5
-
-private void createArrivalRates() {
-    stopArrivalRates.clear();
-    stopArrivalProgress.clear();
-
-    for (int i = 0; i < stops.size(); i++) {
-        stopArrivalRates.add(0.1 + 0.4 * random.nextDouble());
-        stopArrivalProgress.add(0.0);
-        }
-    }
-
-private void resetLoadingTimers() {
-    busLoadingSeconds.clear();
-
-    for (int i = 0; i < buses.size(); i++) {
-        busLoadingSeconds.add(0.0);
-        }
-    }
-
-private void addNewPassengers(double seconds) {
-    for (int i = 0; i < stops.size(); i++) {
-        BusStop stop = stops.get(i);
-
-        double progress = stopArrivalProgress.get(i) + stopArrivalRates.get(i) * seconds;
-        int newPassengers = (int) progress;
-        progress = progress - newPassengers;
-        stopArrivalProgress.set(i, progress);
-
-        if (newPassengers > 0) {
-            stop.updatePassengers(stop.getPassenger() + newPassengers);
             }
         }
     }
 
-
-private boolean isLoading(int busIndex, double seconds) {
-    double secondsLeft = busLoadingSeconds.get(busIndex);
-
-    if (secondsLeft <= 0) {
-        return false;
+    // step 5
+  private void createArrivalRates() {
+        for (BusStop stop : stops) {
+            stop.setArrivalRate(0.1 + 0.4 * random.nextDouble());
         }
-
-    busLoadingSeconds.set(busIndex, secondsLeft - seconds);
-    return true;
+    }
+    private void addNewPassengers(double seconds) {
+        for (BusStop stop : stops) {
+            stop.advancePassengers(seconds);
+        }
     }
 
-private int findStopIndexAt(Location location) {
-    for (int i = 0; i < stops.size(); i++) {
-        Location stopLocation = stops.get(i).getLocation();
+    private void resetLoadingTimers() {
+        for (Bus bus : buses) {
+            bus.startLoading(0.0);
+        }
+    }
 
-        if (stopLocation.getX() == location.getX() && stopLocation.getY() == location.getY()) {
-            return i;
+    private int findStopIndexAt(Location location) {
+        for (int i = 0; i < stops.size(); i++) {
+            Location stopLocation = stops.get(i).getLocation();
+
+            if (stopLocation.getX() == location.getX() && stopLocation.getY() == location.getY()) {
+                return i;
+                }
             }
+        return -1;
         }
-    return -1;
+        
+    private void arriveAtStop(int busIndex, Bus bus, Location stopLocation) {
+        int stopIndex = findStopIndexAt(stopLocation);
+        if (stopIndex == -1) {
+            return;
+        }
+        BusStop stop = stops.get(stopIndex);
+
+        int gettingOff = bus.getCurrentPassengers();
+        bus.arriveAt(stop, LOADING_SECONDS);
+        int gettingOn = bus.getCurrentPassengers();
+
+        System.out.println(bus.getBusPrefix() + (busIndex + 1) + " at Stop " + (stopIndex + 1) + ": "
+                    + gettingOff + " got off, " + gettingOn + " got on, " + stop.getPassenger() + " still waiting");
+
+        }
+
     }
-    
-
-private void arriveAtStop(int busIndex, Bus bus, Location stopLocation) {
-    int stopIndex = findStopIndexAt(stopLocation);
-    if (stopIndex == -1) { return; }
-    BusStop stop = stops.get(stopIndex);
-
-    int gettingOff = bus.getCurrentPassengers();
-    bus.setCurrentPassengers(0);
-
-    int waiting = stop.getPassenger();
-    int gettingOn = Math.min(waiting, bus.getPassengerCapacity());
-    bus.setCurrentPassengers(gettingOn);
-    stop.updatePassengers(waiting - gettingOn);
-
-    stop.recordVisit();
-    bus.setLastVisitedStop(stopLocation);
-    busLoadingSeconds.set(busIndex, LOADING_SECONDS);
-
-    System.out.println(busPrefix(bus) + (busIndex + 1) + " at Stop" + (stopIndex + 1) + ": "
-                + gettingOff + " got off, " + gettingOn + " got on, " + stop.getPassenger() + " still waiting");
-
-}
-
-}
-

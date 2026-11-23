@@ -1,3 +1,9 @@
+import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.StrokeLineCap;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
+import javafx.scene.text.TextAlignment;
 
 /** 
     * <p> <b>Project Name:</b> Bus Rerouting
@@ -9,15 +15,20 @@
     *       <p>- Salam Kanno
     *       <p>- Omar AbuSabaah
     * 
-    * @version v1.1 11/20/26
+    * @version v1.2 11/23/26
 
     
 **/
+
+
 
 public class BusStop {
     private int waitingPassengers;
     private long lastRecordedVisit; 
     private Location busStopLocation;
+    private double arrivalRate;
+    private double arrivalProgress;
+    
 
     public BusStop(Location location){
         if (location != null){
@@ -47,7 +58,6 @@ public class BusStop {
     }
 
     
-
     // Getters
     public int getPassenger(){ return waitingPassengers; }
     
@@ -64,6 +74,78 @@ public class BusStop {
                 + ", waiting=" + waitingPassengers + "]";
     }
 
+
+    // Drawing Section
+    public void draw(GraphicsContext drawingBrush, int stopNumber, double centerX, double centerY,
+                     double unit, Color poleColor, Color accentColor, Color boxFill, Color labelColor,
+                     Color outlineColor) {
+
+                    
+        drawingBrush.save();
+        drawingBrush.setTextAlign(TextAlignment.CENTER);
+        drawingBrush.setFont(Font.font("System", FontWeight.BOLD, 13)); // we can change the font here  
+        double poleX = centerX - unit - 3;
+
+        // Pole
+        drawingBrush.setLineCap(StrokeLineCap.BUTT);
+        drawingBrush.setStroke(poleColor);
+        drawingBrush.setLineWidth(Math.max(2, unit * 0.2));
+        drawingBrush.strokeLine(poleX, centerY - unit * 1.5, poleX, centerY + unit * 0.9);
+
+        // Flag
+        drawingBrush.setFill(accentColor);
+        drawingBrush.fillRect(poleX - unit * 0.3, centerY - unit * 1.55, unit * 0.65, unit * 0.55);
+
+        // Sign box
+        drawingBrush.setFill(boxFill);
+        drawingBrush.fillRect(centerX - unit, centerY - unit, 2 * unit, 2 * unit);
+        drawingBrush.setStroke(accentColor);
+        drawingBrush.setLineWidth(2);
+        drawingBrush.strokeRect(centerX - unit, centerY - unit, 2 * unit, 2 * unit);
+
+        // Top bar
+        drawingBrush.setFill(accentColor);
+        drawingBrush.fillRect(centerX - unit, centerY - unit, 2 * unit, unit * 0.4);  
+
+        // Label
+        String text = "Stop " + (stopNumber) + " (" + getPassenger() + ")";
+        double labelY = centerY - unit * 1.95;
+        drawingBrush.setLineWidth(3);
+        drawingBrush.setStroke(outlineColor);
+        drawingBrush.strokeText(text, centerX, labelY);
+        drawingBrush.setFill(labelColor);
+        drawingBrush.fillText(text, centerX, labelY);
+
+        drawingBrush.restore();
+         
+    }
+    
+
+    // Arrival of passengers to the bus stop
+    public double getArrivalRate() {
+        return arrivalRate;
+    }
+
+    public void setArrivalRate(double arrivalRate) {
+        this.arrivalRate = arrivalRate;
+    }
+
+    public void advancePassengers(double seconds) {
+        arrivalProgress += arrivalRate * seconds;
+        int newPassengers = (int) arrivalProgress;
+        arrivalProgress -= newPassengers;
+
+        if (newPassengers > 0) {
+            updatePassengers(waitingPassengers + newPassengers);
+        }
+    }
+
+    public int boardPassengers(int maxPassengers) {
+        int boarding = Math.min(waitingPassengers, maxPassengers);
+        updatePassengers(waitingPassengers - boarding);
+        recordVisit();
+        return boarding;
+    }
 
 
 }

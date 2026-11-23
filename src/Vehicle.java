@@ -9,7 +9,7 @@ import javafx.scene.paint.Color;
     *       <p>- Salam Kanno
     *       <p>- Omar AbuSabaah
     * 
-    * @version v1.1 11/20/26
+    * @version v1.2 11/23/26
 
     
 **/
@@ -105,6 +105,34 @@ public abstract class Vehicle {
     
     public Location getDestination(){
         return new Location(Destination.getX(), Destination.getY());
+    }
+
+    // move logic
+    public void moveTowardDestination(double distance) {
+        Location current = getCurrentLocation();
+        Location target = getDestination();
+        double x = current.getX();
+        double y = current.getY();
+
+        double differenceX = target.getX() - x;
+        double stepX = Math.min(distance, Math.abs(differenceX));
+        if (stepX == Math.abs(differenceX)) {
+            x = target.getX();
+        } else {
+            x = x + Math.signum(differenceX) * stepX;
+        }
+
+        distance = distance - stepX;
+
+        double differenceY = target.getY() - y;
+        double stepY = Math.min(distance, Math.abs(differenceY));
+        if (stepY == Math.abs(differenceY)) {
+            y = target.getY();
+        } else {
+            y = y + Math.signum(differenceY) * stepY;
+        }
+
+        updateLocation(x, y);
     }
     
 }

@@ -11,13 +11,18 @@ import java.util.ArrayList;
     *       <p>- Salam Kanno
     *       <p>- Omar AbuSabaah
     * 
-    * @version v1.0 11/17/26
+    * @version v1.1 11/23/26
 
     
 **/
 
 public class DoubleDecker extends Bus {
     public DoubleDecker(Color color, ArrayList<Location> route){
-        super(50, 15, color, route);
+        super(50, 15, color, route, "DD");
+    }
+
+    @Override
+    public String getIconFileName() {
+        return "DoubleDeckerIcon.png";
     }
 }
