@@ -1,0 +1,4 @@
+{
+  "java.project.sourcePaths": ["src", "."],
+  "java.project.referencedLibraries": ["C:/Users/abdul/Downloads/EE364project/javafx-sdk-27.0.1/lib/*.jar"]
+}

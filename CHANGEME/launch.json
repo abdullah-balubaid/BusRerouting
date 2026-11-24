@@ -1,0 +1,12 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Run JavaFX",
+      "request": "launch",
+      "mainClass": "Map",
+      "vmArgs": "--module-path \"C:/Users/abdul/Downloads/EE364project/javafx-sdk-27.0.1/lib\" --add-modules javafx.controls,javafx.graphics,javafx.fxml"
+    }
+  ]
+}
