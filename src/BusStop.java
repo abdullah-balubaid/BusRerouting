@@ -4,6 +4,7 @@ import javafx.scene.shape.StrokeLineCap;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.TextAlignment;
+import java.util.ArrayDeque;
 
 /** 
     * <p> <b>Project Name:</b> Bus Rerouting
@@ -15,7 +16,7 @@ import javafx.scene.text.TextAlignment;
     *       <p>- Salam Kanno
     *       <p>- Omar AbuSabaah
     * 
-    * @version v1.2 11/23/26
+    * @version v1.3 11/24/26
 
     
 **/
@@ -28,7 +29,13 @@ public class BusStop {
     private Location busStopLocation;
     private double arrivalRate;
     private double arrivalProgress;
-    
+    private final ArrayDeque<Double> arrivalTimes = new ArrayDeque<>();
+    private double totalWaitSeconds = 0;
+    private int totalBoarded = 0;
+
+    // note 5: priority. HIGH stops are active all day and are the only ones a DoubleDecker may
+    // serve; LOW stops are active only part of the day (e.g. a morning/evening window).
+    private boolean highPriority = true;   // defaults to high priority, so existing callers are unaffected
 
     public BusStop(Location location){
         if (location != null){
@@ -43,6 +50,10 @@ public class BusStop {
         busStopLocation = new Location(x, y);
         
     }
+
+    // note 5
+    public boolean isHighPriority() { return highPriority; }
+    public void setHighPriority(boolean highPriority) { this.highPriority = highPriority; }
 
     public void updatePassengers(int Passengers){
         if (Passengers < 0){
@@ -73,6 +84,7 @@ public class BusStop {
         return "BusStop[" + busStopLocation.getX() + ", " + busStopLocation.getY()
                 + ", waiting=" + waitingPassengers + "]";
     }
+
 
 
     // Drawing Section
@@ -130,7 +142,7 @@ public class BusStop {
         this.arrivalRate = arrivalRate;
     }
 
-    public void advancePassengers(double seconds) {
+    public void advancePassengers(double seconds, double nowInSimulatedSeconds) {
         arrivalProgress += arrivalRate * seconds;
         int newPassengers = (int) arrivalProgress;
         arrivalProgress -= newPassengers;
@@ -138,14 +150,70 @@ public class BusStop {
         if (newPassengers > 0) {
             updatePassengers(waitingPassengers + newPassengers);
         }
+
+        for (int i = 0; i <newPassengers; i++) {
+            arrivalTimes.addLast(nowInSimulatedSeconds);
+        }
+    }
+    
+
+    // note 5: a low-priority stop is only "open" during part of the simulated day. The 300-minute
+    // run stands in for a full day, so it is split into three bands: morning (0-60 min), midday
+    // (60-240 min, closed for low-priority stops), evening (240-300 min). High-priority stops are
+    // always open.
+    public boolean isOpenAt(double nowInSimulatedMinutes) {
+        if (highPriority) {
+            return true;
+        }
+        boolean morning = nowInSimulatedMinutes < 60;
+        boolean evening = nowInSimulatedMinutes >= 240;
+        return morning || evening;
     }
 
     public int boardPassengers(int maxPassengers) {
+        return boardPassengers(maxPassengers, 0);
+    }
+
+    public int boardPassengers(int maxPassengers, double nowInSiumlatedSeconds) {
         int boarding = Math.min(waitingPassengers, maxPassengers);
         updatePassengers(waitingPassengers - boarding);
         recordVisit();
+
+        for (int i = 0; i < boarding; i++) {
+            Double arrivalTime = arrivalTimes.pollFirst();
+            if (arrivalTime != null) {
+                totalWaitSeconds += (nowInSiumlatedSeconds - arrivalTime);
+                totalBoarded++;
+            }
+        }
+
         return boarding;
     }
 
+    public double getAverageWaitMinutes() {
+        if (totalBoarded == 0) {
+            return Double.NaN;
+        }
+
+        return (totalWaitSeconds / totalBoarded) / 60.0;
+    }
+
+    public double getTotalWaitSeconds() {
+        return totalWaitSeconds;
+    }
+
+    public int getTotalBoarded() {
+        return totalBoarded;
+    }
+    
+    public double getOldestWaitSeconds(double nowInSimulatedSeconds) {
+        Double oldestArrival = arrivalTimes.peekFirst();
+
+        if (oldestArrival == null) {
+            return 0;
+        }
+
+        return nowInSimulatedSeconds - oldestArrival;
+    }
 
 }

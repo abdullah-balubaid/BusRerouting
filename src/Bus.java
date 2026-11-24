@@ -75,6 +75,12 @@ public abstract class Bus extends Vehicle {
 
     public String getBusPrefix() { return busPrefix; }
 
+    // note 5: by default any bus may serve any stop; DoubleDecker overrides this to restrict
+    // itself to high-priority stops only.
+    public boolean canServe(BusStop stop) {
+        return true;
+    }
+
     
     // Loading the Bus
     public void startLoading(double seconds) {
@@ -341,10 +347,5 @@ public abstract class Bus extends Vehicle {
         drawingBrush.setLineDashes((double[]) null);
         drawingBrush.restore();
     }
-
-    
-
-        
-    
-    
+  
 }

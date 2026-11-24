@@ -11,7 +11,7 @@ import java.util.ArrayList;
     *       <p>- Salam Kanno
     *       <p>- Omar AbuSabaah
     * 
-    * @version v1.1 11/23/26
+    * @version v1.2 11/24/26
 
     
 **/
@@ -24,5 +24,11 @@ public class DoubleDecker extends Bus {
     @Override
     public String getIconFileName() {
         return "DoubleDeckerIcon.png";
+    }
+
+    // note 5: double-deckers only serve high-priority stops
+    @Override
+    public boolean canServe(BusStop stop) {
+        return stop.isHighPriority();
     }
 }
