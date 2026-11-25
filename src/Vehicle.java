@@ -1,119 +1,213 @@
 import javafx.scene.paint.Color;
-/** 
-    * <p> <b>Project Name:</b> Bus Rerouting
-    * <p> <b>Class Name:</b> Vehicle
-    * <p> <b>Purpose:</b> Abstract base class representing a vehicle with capacity, speed, color, passenger count, and movement state.
-    * @author 
-    *       <p>- Ahmad Balfakeeh  
-    *       <p>- Abdullah Balubaid
-    *       <p>- Salam Kanno
-    *       <p>- Omar AbuSabaah
-    * 
-    * @version v1.2 11/23/26
 
-    
-**/
-
+/**
+ * <p><b>Project Name:</b> Bus Rerouting</p>
+ * <p><b>Class Name:</b> Vehicle</p>
+ * <p><b>Purpose:</b> Abstract base class representing a vehicle with capacity, speed, color,
+ * passenger count, and grid movement state.</p>
+ *
+ * @author Ahmad Balfakeeh
+ * @author Abdullah Balubaid
+ * @author Salam Kanno
+ * @author Omar AbuSabaah
+ * @version v1.3 11/25/26
+ */
 public abstract class Vehicle {
-    private final int PASSENGER_CAPACITY; 
-    private final int SPEED;  
-    private Color color;                                            // Used to determine the color of the vehicle.
-    private boolean isMoving = false;                               // Used to check whether the vehicle is moving (T) or not (F).
-    private int currentPassengers = 0;                              // Used to determine the current number of passengers in the vehicle.
-    private Location currentLocation = new Location(0, 0);     // Used to determine the current location of the vehicle.
-    private Location Destination = new Location(0, 0);         // Used to determine the final   location of the vehicle.
+    private final int PASSENGER_CAPACITY;                         // Maximum number of passengers the vehicle can hold
+    private final int SPEED;                                      // Vehicle speed rating
+    private Color color;                                          // Display/tinting color of the vehicle
+    private boolean isMoving = false;                             // True when current location differs from destination
+    private int currentPassengers = 0;                            // Current number of passengers aboard
+    private Location currentLocation = new Location(0, 0);        // Current grid position of the vehicle
+    private Location Destination = new Location(0, 0);            // Target grid destination of the vehicle
 
-
-        /**
-        * Constructor that intiailizes an object of the Vehicle class that takes the details regarding the vehicle status.
-        * @param Capacity Used to determine the total number of vehicle's seats.
-        * @param Speed Used to determine the speed of the vehicle.
-        * Pre-condition: PASSENGER_CAPCITY and SPEED must not hold a value prior creation of the object.
-        * Post-condition: The vehicle object contains the major info regarding its status.
-        **/
-
-    protected Vehicle(int Capacity , int Speed, Color color){
-        if (Capacity <= 0 || Speed <= 0){
+    /**
+     * Constructs a {@code Vehicle} with validated capacity, speed, and color.
+     *
+     * @param Capacity total passenger seating capacity (must be positive)
+     * @param Speed    movement speed rating (must be positive)
+     * @param color    vehicle color (must not be {@code null})
+     * @throws IllegalArgumentException if {@code Capacity} or {@code Speed} is less than or equal to 0
+     * @throws NullPointerException     if {@code color} is {@code null}
+     */
+    protected Vehicle(int Capacity, int Speed, Color color) {
+        if (Capacity <= 0 || Speed <= 0) {
             throw new IllegalArgumentException("Capacity and speed must be positive.");
         }
 
-        if (color == null){
+        if (color == null) {
             throw new NullPointerException("The chosen color must be not null.");
         }
-        
+
         SPEED = Speed;
         PASSENGER_CAPACITY = Capacity;
         this.color = color;
-            
     }
 
-    // Checkers
-    public boolean isEmpty(){ return currentPassengers == 0; }
-    public boolean isMoving(){ return isMoving; }
-    public boolean isFull(){ return currentPassengers == PASSENGER_CAPACITY; }
-    
+    /**
+     * Checks whether the vehicle currently has zero passengers.
+     *
+     * @return {@code true} if no passengers are aboard, {@code false} otherwise
+     */
+    public boolean isEmpty() {
+        return currentPassengers == 0;
+    }
 
-    // Setters
-    public void updateLocation(Location newLocation){
+    /**
+     * Checks whether the vehicle is currently moving toward its destination.
+     *
+     * @return {@code true} if moving, {@code false} otherwise
+     */
+    public boolean isMoving() {
+        return isMoving;
+    }
+
+    /**
+     * Checks whether the vehicle has reached its maximum passenger capacity.
+     *
+     * @return {@code true} if full, {@code false} otherwise
+     */
+    public boolean isFull() {
+        return currentPassengers == PASSENGER_CAPACITY;
+    }
+
+    /**
+     * Updates the vehicle's current location from a {@link Location} instance and refreshes
+     * its movement state.
+     *
+     * @param newLocation the new grid position
+     */
+    public void updateLocation(Location newLocation) {
         currentLocation.updateLocation(newLocation);
         updateMoving();
     }
 
-    public void updateLocation(double x, double y){
+    /**
+     * Updates the vehicle's current location using explicit X and Y coordinates and refreshes
+     * its movement state.
+     *
+     * @param x new X coordinate
+     * @param y new Y coordinate
+     */
+    public void updateLocation(double x, double y) {
         currentLocation.updateLocation(x, y);
         updateMoving();
-    } // NEW
+    }
 
-    public void updateDestination(Location newDestination){
+    /**
+     * Updates the vehicle's target destination from a {@link Location} instance and refreshes
+     * its movement state.
+     *
+     * @param newDestination the new target destination
+     */
+    public void updateDestination(Location newDestination) {
         Destination.updateLocation(newDestination);
         updateMoving();
     }
 
-    public void updateDestination(double x, double y){
+    /**
+     * Updates the vehicle's target destination using explicit X and Y coordinates and refreshes
+     * its movement state.
+     *
+     * @param x target X coordinate
+     * @param y target Y coordinate
+     */
+    public void updateDestination(double x, double y) {
         Destination.updateLocation(x, y);
         updateMoving();
-    } // NEW
-    
-    public void setCurrentPassengers(int Passengers){ 
-        if (Passengers <= PASSENGER_CAPACITY && Passengers >= 0){
-        currentPassengers = Passengers;
     }
-        else if (Passengers > PASSENGER_CAPACITY) {
+
+    /**
+     * Sets the current number of passengers aboard if within {@code [0, PASSENGER_CAPACITY]};
+     * otherwise prints a validation message without changing the count.
+     *
+     * @param Passengers desired passenger count
+     */
+    public void setCurrentPassengers(int Passengers) {
+        if (Passengers <= PASSENGER_CAPACITY && Passengers >= 0) {
+            currentPassengers = Passengers;
+        } else if (Passengers > PASSENGER_CAPACITY) {
             System.out.println("The vehicle is overfilled.");
-        }
-        else {
+        } else {
             System.out.println("Invalid number of passengers.");
         }
-        
-    } // NEW
+    }
 
-    public void updateMoving(){
+    /**
+     * Recomputes {@link #isMoving} by comparing {@link #currentLocation} against {@link #Destination}.
+     */
+    public void updateMoving() {
         isMoving = currentLocation.getX() != Destination.getX()
                 || currentLocation.getY() != Destination.getY();
-    } // NEW
+    }
 
+    /**
+     * Returns the vehicle's maximum passenger capacity.
+     *
+     * @return passenger capacity
+     */
+    public int getPassengerCapacity() {
+        return PASSENGER_CAPACITY;
+    }
 
-    // Getters
-    public int getPassengerCapacity(){ return PASSENGER_CAPACITY; }
-    public int getSpeed(){ return SPEED; }
-    public Color getColor(){ return color; }
-    public int getCurrentPassengers(){ return currentPassengers; }
-    
-    public Location getCurrentLocation(){
+    /**
+     * Returns the vehicle's speed rating.
+     *
+     * @return speed rating
+     */
+    public int getSpeed() {
+        return SPEED;
+    }
+
+    /**
+     * Returns the vehicle's color.
+     *
+     * @return vehicle {@link Color}
+     */
+    public Color getColor() {
+        return color;
+    }
+
+    /**
+     * Returns the current number of passengers aboard.
+     *
+     * @return current passenger count
+     */
+    public int getCurrentPassengers() {
+        return currentPassengers;
+    }
+
+    /**
+     * Returns a defensive copy of the vehicle's current location.
+     *
+     * @return copy of {@link #currentLocation}
+     */
+    public Location getCurrentLocation() {
         return new Location(currentLocation.getX(), currentLocation.getY());
     }
-    
-    public Location getDestination(){
+
+    /**
+     * Returns a defensive copy of the vehicle's current destination.
+     *
+     * @return copy of {@link #Destination}
+     */
+    public Location getDestination() {
         return new Location(Destination.getX(), Destination.getY());
     }
 
-    // move logic
+    /**
+     * Moves the vehicle along grid axes toward its destination by up to {@code distance} grid units
+     * (first along X, then using any remaining distance along Y), clamping at the target.
+     *
+     * @param distance maximum grid distance to travel in this step
+     */
     public void moveTowardDestination(double distance) {
         Location current = getCurrentLocation();
         Location target = getDestination();
         double x = current.getX();
         double y = current.getY();
 
+        // Step along X first, snapping directly to target X if within reach
         double differenceX = target.getX() - x;
         double stepX = Math.min(distance, Math.abs(differenceX));
         if (stepX == Math.abs(differenceX)) {
@@ -122,6 +216,7 @@ public abstract class Vehicle {
             x = x + Math.signum(differenceX) * stepX;
         }
 
+        // Apply remaining movement budget to Y
         distance = distance - stepX;
 
         double differenceY = target.getY() - y;
@@ -134,5 +229,4 @@ public abstract class Vehicle {
 
         updateLocation(x, y);
     }
-    
 }

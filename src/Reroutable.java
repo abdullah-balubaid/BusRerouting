@@ -1,20 +1,21 @@
-/** 
-    * <p> <b>Project Name:</b> Bus Rerouting
-    * <p> <b>Interface Name:</b> Reroutable
-    * <p> <b>Purpose:</b> A base interface that the StandardBus and MiniBus classes implements for re-routing updating.
-    * @author 
-    *       <p>- Ahmad Balfakeeh  
-    *       <p>- Abdullah Balubaid
-    *       <p>- Salam Kanno
-    *       <p>- Omar AbuSabaah
-    * 
-    * @version v1.1 11/20/26
-
-    
-**/
-
+/**
+ * <p><b>Project Name:</b> Bus Rerouting</p>
+ * <p><b>Interface Name:</b> Reroutable</p>
+ * <p><b>Purpose:</b> Interface implemented by bus types (such as {@link StandardBus} and
+ * {@link MiniBus}) that support dynamic destination rerouting during simulation.</p>
+ *
+ * @author Ahmad Balfakeeh
+ * @author Abdullah Balubaid
+ * @author Salam Kanno
+ * @author Omar AbuSabaah
+ * @version v1.2 11/25/26
+ */
 public interface Reroutable {
 
+    /**
+     * Redirects the implementing bus to a new target {@link Location}.
+     *
+     * @param newDestination target grid location to reroute toward
+     */
     void reRoute(Location newDestination);
-    
 }
