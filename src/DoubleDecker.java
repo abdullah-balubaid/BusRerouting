@@ -4,36 +4,42 @@ import java.util.ArrayList;
 /**
  * <p><b>Project Name:</b> Bus Rerouting</p>
  * <p><b>Class Name:</b> DoubleDecker</p>
- * <p><b>Purpose:</b> High-capacity double-decker bus subclass (50 seats, speed 15, prefix {@code "DD"})
- * restricted exclusively to high-priority stops with a higher per-minute operating cost.</p>
+ * <p><b>Purpose:</b> High-capacity double-decker bus subclass (50 seats, 18 km/h, prefix {@code "DD"})
+ * restricted exclusively to high-priority stops, with a higher cost per grid cell driven.</p>
  *
  * @author Ahmad Balfakeeh
  * @author Abdullah Balubaid
  * @author Salam Kanno
  * @author Omar AbuSabaah
- * @version v1.3 11/25/26
+ * @version v1.5 11/26/26
  */
 public class DoubleDecker extends Bus {
+    /** Name of this kind of bus, as shown in menus and saved builds. */
+    public static final String TYPE_NAME = "Double Decker";
+    private static final String ICON_FILE = "DoubleDeckerIcon.png";    // Picture of this kind of bus
+    private static final double COST_PER_KM = 6.0;   // Costs the most to run, reflecting its size
+    private static final int SPEED_KMH = 18;   // Large and slow
+    private static final double ICON_SCALE = 1.3;      // Its picture looks small at the standard size, so it is drawn bigger
 
     /**
-     * Constructs a {@code DoubleDecker} bus with a capacity of 50 passengers, speed of 15,
+     * Constructs a {@code DoubleDecker} bus with a capacity of 50 passengers, speed of 18 km/h,
      * prefix {@code "DD"}, the given display color, and the specified route.
      *
      * @param color display/tinting color of the bus
      * @param route list of {@link Location} stops along the bus's route
      */
     public DoubleDecker(Color color, ArrayList<Location> route) {
-        super(50, 15, color, route, "DD");
+        super(50, SPEED_KMH, color, route, "DD", COST_PER_KM, new Icon(ICON_FILE, ICON_SCALE, color));
     }
 
     /**
-     * Returns the image file name used for rendering a double-decker bus icon.
+     * Returns the name of this kind of bus.
      *
-     * @return {@code "DoubleDeckerIcon.png"}
+     * @return {@code "Double Decker"}
      */
     @Override
-    public String getIconFileName() {
-        return "DoubleDeckerIcon.png";
+    public String getTypeName() {
+        return TYPE_NAME;
     }
 
     /**
@@ -43,20 +49,8 @@ public class DoubleDecker extends Bus {
      * @param stop the {@link BusStop} to check
      * @return {@code true} if {@code stop} is high priority, {@code false} otherwise
      */
-    // note 5: double-deckers only serve high-priority stops
     @Override
     public boolean canServe(BusStop stop) {
         return stop.isHighPriority();
-    }
-
-    /**
-     * Returns the operating cost incurred per simulated minute for running a double-decker bus.
-     *
-     * @return operating cost per simulated minute ({@code 1.8})
-     */
-    // note 1: higher per-minute cost reflecting larger capacity
-    @Override
-    public double getOperatingCostPerMinute() {
-        return 1.8;
     }
 }

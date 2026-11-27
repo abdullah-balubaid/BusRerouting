@@ -1,57 +1,62 @@
-import java.util.ArrayList;
-
-import javafx.scene.paint.Color;
 import javafx.scene.canvas.GraphicsContext;
-import java.util.function.DoubleUnaryOperator;
+import javafx.scene.image.Image;
+import javafx.scene.paint.Color;
 import javafx.scene.shape.StrokeLineCap;
-
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.TextAlignment;
-
-
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-
-import javafx.scene.image.Image;
-import javafx.scene.image.PixelFormat;
-import javafx.scene.image.WritableImage;
+import java.util.ArrayList;
+import java.util.function.DoubleUnaryOperator;
 
 /**
  * <p><b>Project Name:</b> Bus Rerouting</p>
  * <p><b>Class Name:</b> Bus</p>
- * <p><b>Purpose:</b> Abstract bus extending {@link Vehicle} with route waypoints, last-visited stop
- * tracking, loading state, icon loading/recoloring, and route/bus canvas rendering.</p>
+ * <p><b>Purpose:</b> Abstract bus extending {@link Vehicle} with route waypoints, its place on that
+ * route (including whether it is on a reroute), last-visited stop tracking, loading state, its own
+ * name ("S1"), its {@link Icon}, and route/bus canvas rendering.</p>
  *
  * @author Ahmad Balfakeeh
  * @author Abdullah Balubaid
  * @author Salam Kanno
  * @author Omar AbuSabaah
- * @version v1.3 11/25/26
+ * @version v1.5 11/26/26
  */
 public abstract class Bus extends Vehicle {
-    protected ArrayList<Location> route = new ArrayList<Location>(); // Ordered sequence of route stop locations
-    private Location lastVisitedStop;                                // Copy of the most recently visited stop location
-    private String busPrefix;                                        // Short display prefix for this bus type (e.g., "S", "M", "DD")
+    private final ArrayList<Location> route;                         // Ordered sequence of route stop locations
+    private final String busPrefix;                                  // Short display prefix for this bus type (e.g., "S", "M", "DD")
+    private int number = 0;                                          // 1-based position in the network (shown as "S1")
+    private int nextStopIndex = 0;                                   // Index in the route of the stop this bus is scheduled to visit next
+    private double previousX;                                      // Where the bus was before its latest step (for smooth drawing)
+    private double previousY;
+    private final double costPerKm;                                 // What it costs to drive this bus one kilometre
+    private final Icon icon;                                        // This bus's picture, tinted with its colour
+    private boolean heldBack;                                       // True while the bus waits for passengers instead of driving
     private double loadingSecondsRemaining;                          // Remaining simulated loading pause in seconds
 
     /**
      * Constructs a {@code Bus} extending {@link Vehicle} with validated non-null, non-empty route waypoints.
      *
      * @param Capacity  maximum passenger capacity
-     * @param Speed     movement speed rating
+     * @param Speed     driving speed in km/h
      * @param color     display/tinting color of the bus
      * @param route     non-null, non-empty list of route {@link Location} stops
      * @param busPrefix short label prefix identifying the bus type
+     * @param costPerKm what it costs to drive this bus one kilometre (must not be negative)
+     * @param icon      this bus's picture (a tinted {@link Icon} of its own)
      * @throws NullPointerException     if {@code route} is {@code null} (or if {@code color} is {@code null} in {@code super})
-     * @throws IllegalArgumentException if {@code route} is empty (or if capacity/speed are non-positive in {@code super})
+     * @throws IllegalArgumentException if {@code route} is empty or {@code costPerKm} is negative (or if capacity/speed are non-positive in {@code super})
      */
-    protected Bus(int Capacity, int Speed, Color color, ArrayList<Location> route, String busPrefix) {
+    protected Bus(int Capacity, int Speed, Color color, ArrayList<Location> route, String busPrefix,
+                  double costPerKm, Icon icon) {
         super(Capacity, Speed, color);
 
+        if (costPerKm < 0) {
+            throw new IllegalArgumentException("costPerKm must not be negative.");
+        }
+
         this.busPrefix = busPrefix;
+        this.costPerKm = costPerKm;
+        this.icon = icon;
 
         if (route == null) {
             throw new NullPointerException("route must not be null.");
@@ -71,37 +76,135 @@ public abstract class Bus extends Vehicle {
     }
 
     /**
-     * Records a defensive copy of the most recently visited stop location.
+     * Returns the name of this kind of bus, as shown in the Build Mode drop-down and used in saved builds.
      *
-     * @param stop location of the visited stop (must not be {@code null})
-     * @throws NullPointerException if {@code stop} is {@code null}
+     * @return text such as {@code "Standard Bus"}
      */
-    public void setLastVisitedStop(Location stop) {
-        if (stop == null) {
-            throw new NullPointerException("Last visited stop must not be null.");
-        }
-        lastVisitedStop = new Location(stop.getX(), stop.getY());
+    public abstract String getTypeName();
+
+    /**
+     * Sets this bus's 1-based position in the network.
+     *
+     * @param number the position, starting at 1
+     */
+    public void setNumber(int number) {
+        this.number = number;
     }
 
     /**
-     * Returns a defensive copy of the last visited stop location, or {@code null} if none has been recorded.
+     * Returns this bus's short name.
      *
-     * @return copy of {@link #lastVisitedStop}, or {@code null}
+     * @return text such as {@code "S1"} or {@code "DD3"}
      */
-    public Location getLastVisitedStop() {
-        if (lastVisitedStop == null) {
-            return null;
-        }
-        return new Location(lastVisitedStop.getX(), lastVisitedStop.getY());
+    public String getName() {
+        return busPrefix + number;
     }
 
     /**
-     * Returns the short display prefix for this bus type.
+     * Returns how much bigger or smaller than the standard icon size this bus is drawn.
      *
-     * @return bus prefix string
+     * @return the icon's size multiplier
      */
-    public String getBusPrefix() {
-        return busPrefix;
+    public double getIconScale() {
+        return icon.getScale();
+    }
+
+    /**
+     * Remembers where the bus is now. Called before every simulation step, so the picture can be
+     * drawn smoothly somewhere between the last step's position and this one.
+     */
+    public void rememberPosition() {
+        previousX = getLocation().getX();
+        previousY = getLocation().getY();
+    }
+
+    /**
+     * Returns where to draw the bus: somewhere between its position before the latest step and its
+     * position now. Drawing between steps keeps the motion smooth at slow speeds.
+     *
+     * @param fraction how far through the latest step the display is (0 = before it, 1 = after it)
+     * @return the position to draw at
+     */
+    public Location getDrawLocation(double fraction) {
+        Location now = getLocation();
+        return new Location(previousX + (now.getX() - previousX) * fraction,
+                previousY + (now.getY() - previousY) * fraction);
+    }
+
+    /**
+     * Describes the bus by its name and how full it is.
+     *
+     * @return text such as {@code "S1 12/30"}
+     */
+    @Override
+    public String toString() {
+        return getName() + " " + getCurrentPassengers() + "/" + getPassengerCapacity();
+    }
+
+    /**
+     * Tells whether the bus is waiting for passengers instead of driving on (cost-saving runs only).
+     *
+     * @return {@code true} while the bus is held back
+     */
+    public boolean isHeldBack() {
+        return heldBack;
+    }
+
+    /**
+     * Sets whether the bus is waiting for passengers.
+     *
+     * @param heldBack {@code true} to hold the bus where it is
+     */
+    public void setHeldBack(boolean heldBack) {
+        this.heldBack = heldBack;
+    }
+
+    /**
+     * Tells whether this bus is heading for a stop that is not its next scheduled one, which means
+     * it was rerouted and has not arrived yet.
+     *
+     * @return {@code true} while on a reroute
+     */
+    public boolean isRerouting() {
+        return !getDestination().equals(route.get(nextStopIndex));
+    }
+
+    /**
+     * Puts the bus back at the start of its route, empty, with its driving distance cleared and the
+     * second stop of the route as its destination. Both phases start from this state.
+     */
+    public void resetForNewRun() {
+        updateLocation(route.get(0));
+        rememberPosition();
+        nextStopIndex = 1 % route.size();
+        updateDestination(route.get(nextStopIndex));
+        setCurrentPassengers(0);
+        startLoading(0.0);
+        heldBack = false;
+        resetDistanceTravelled();
+    }
+
+    /**
+     * Sets the next destination after a stop has been reached. A bus that has just finished a reroute
+     * goes back to the stop it was scheduled for; otherwise it moves on to the next stop of its route.
+     *
+     * @param finishedReroute {@code true} if the stop just reached was a reroute detour
+     */
+    public void headForNextStop(boolean finishedReroute) {
+        if (!finishedReroute) {
+            nextStopIndex = (nextStopIndex + 1) % route.size();
+        }
+        updateDestination(route.get(nextStopIndex));
+    }
+
+    /**
+     * Returns the stop this bus is scheduled to visit next on its own route.
+     *
+     * @return the location of that stop
+     */
+
+    public Location getNextScheduledStop() {
+        return route.get(nextStopIndex);
     }
 
     /**
@@ -117,13 +220,13 @@ public abstract class Bus extends Vehicle {
     }
 
     /**
-     * Returns the operating cost incurred per simulated minute for running this bus type.
+     * Returns the driving cost this bus has run up since its distance was last reset.
      *
-     * @return operating cost per simulated minute
+     * @return kilometres driven times the cost per kilometre
      */
-    // note 1: running cost per simulated minute, in whatever cost unit the project uses. Each
-    // subclass overrides this with its own figure - a bigger bus costs more to operate.
-    public abstract double getOperatingCostPerMinute();
+    public double getTravelCost() {
+        return Scale.cellsToKm(getDistanceTravelled()) * costPerKm;
+    }
 
     /**
      * Starts or sets the remaining loading duration in simulated seconds.
@@ -140,7 +243,7 @@ public abstract class Bus extends Vehicle {
      * @param seconds elapsed simulated seconds in this step
      * @return {@code true} if the bus was still loading during this step, {@code false} if done or not loading
      */
-    public boolean isLoading(double seconds) {
+    public boolean advanceLoading(double seconds) {
         if (loadingSecondsRemaining <= 0) {
             return false;
         }
@@ -150,63 +253,62 @@ public abstract class Bus extends Vehicle {
     }
 
     /**
-     * Performs a standard stop arrival: unloads current passengers, boards waiting passengers up to
-     * capacity, records the visited stop, and starts the loading timer.
+     * Performs a stop arrival: unloads current passengers, boards waiting passengers up to
+     * capacity (recording how long they waited) and starts the loading timer.
      *
-     * @param stop           the {@link BusStop} arrived at (must not be {@code null})
-     * @param loadingSeconds loading pause duration in seconds
+     * @param stop                  the {@link BusStop} arrived at (must not be {@code null})
+     * @param loadingSeconds        loading pause duration in seconds
+     * @param nowInSimulatedSeconds current simulated clock time in seconds
+     * @return number of passengers who boarded
      * @throws NullPointerException if {@code stop} is {@code null}
      */
-    public void arriveAt(BusStop stop, double loadingSeconds) {
+    public int arriveAt(BusStop stop, double loadingSeconds, double nowInSimulatedSeconds) {
         if (stop == null) {
             throw new NullPointerException("Stop must not be null.");
         }
 
         setCurrentPassengers(0);
-        int gettingOn = stop.boardPassengers(getPassengerCapacity());
+        int gettingOn = stop.boardPassengers(getPassengerCapacity(), nowInSimulatedSeconds);
         setCurrentPassengers(gettingOn);
-        setLastVisitedStop(stop.getLocation());
         startLoading(loadingSeconds);
+        return gettingOn;
     }
 
     /**
-     * Renders the bus icon (or a colored fallback rectangle if {@code icon} is {@code null}) and its
-     * outlined status label below the vehicle on the canvas.
+     * Draws the bus (its {@link Icon} picture, or a plain coloured square if the picture is not found),
+     * its "S1 12/30" label below it and, while it is on a reroute, a "REROUTE" tag above it.
      *
      * @param drawingBrush canvas {@link GraphicsContext}
-     * @param busNumber    1-based display number for the bus
-     * @param centerX      center X coordinate in canvas pixels
-     * @param centerY      center Y coordinate in canvas pixels
-     * @param iconSize     fallback square size in pixels
-     * @param icon         pre-rendered/tinted bus {@link Image}, or {@code null} for fallback box
-     * @param labelColor   fill color for the status text
-     * @param outlineColor stroke outline color for the status text
-     * @param rerouting    Indicate whether current bus is reoruting or not
-     * @param rerouteColor text color for the rerouting status
+     * @param centerX      centre X in canvas pixels
+     * @param centerY      centre Y in canvas pixels
+     * @param iconSize     standard icon size in pixels
+     * @param labelColor   fill colour of the label text
+     * @param outlineColor outline colour of the label text
+     * @param rerouteColor fill colour of the "REROUTE" tag
      */
-    public void draw(GraphicsContext drawingBrush, int busNumber, double centerX, double centerY,
-                     double iconSize, Image icon, Color labelColor, Color outlineColor, boolean rerouting, Color rerouteColor) {
+    public void draw(GraphicsContext drawingBrush, double centerX, double centerY, double iconSize,
+                     Color labelColor, Color outlineColor, Color rerouteColor) {
         drawingBrush.save();
         drawingBrush.setTextAlign(TextAlignment.CENTER);
         drawingBrush.setFont(Font.font("System", FontWeight.BOLD, 12));
 
         double topOfBus;
         double bottomOfBus;
-        if (icon != null) {
-            drawingBrush.drawImage(icon, centerX - icon.getWidth() / 2, centerY - icon.getHeight() / 2);
-            topOfBus    = centerY - icon.getHeight() / 2;
-            bottomOfBus = centerY + icon.getHeight() / 2;
-            
+        Image picture = icon.getImage(iconSize);
+        if (picture != null) {
+            drawingBrush.drawImage(picture, centerX - picture.getWidth() / 2, centerY - picture.getHeight() / 2);
+            topOfBus = centerY - picture.getHeight() / 2;
+            bottomOfBus = centerY + picture.getHeight() / 2;
         } else {
-            Color busPlaceHolderRect = getColor();
-            drawingBrush.setFill(Color.color(busPlaceHolderRect.getRed(), busPlaceHolderRect.getGreen(), busPlaceHolderRect.getBlue()));
-            drawingBrush.fillRect(centerX - iconSize / 2, centerY - iconSize / 2, iconSize, iconSize);
-            topOfBus    = centerY + iconSize / 2;
-            bottomOfBus = centerY + iconSize / 2;
-            
+            Color busColor = getColor();
+            drawingBrush.setFill(Color.color(busColor.getRed(), busColor.getGreen(), busColor.getBlue()));
+            double side = iconSize * getIconScale();
+            drawingBrush.fillRect(centerX - side / 2, centerY - side / 2, side, side);
+            topOfBus = centerY - side / 2;
+            bottomOfBus = centerY + side / 2;
         }
 
-        if (rerouting) {
+        if (isRerouting()) {
             double badgeY = topOfBus - 5;
             drawingBrush.setLineWidth(3);
             drawingBrush.setStroke(outlineColor);
@@ -215,7 +317,7 @@ public abstract class Bus extends Vehicle {
             drawingBrush.fillText("REROUTE", centerX, badgeY);
         }
 
-        String text = getBusPrefix() + (busNumber) + " " + getCurrentPassengers() + "/" + getPassengerCapacity();
+        String text = toString();
         double labelY = bottomOfBus + 13;
         drawingBrush.setLineWidth(3);
         drawingBrush.setStroke(outlineColor);
@@ -224,219 +326,6 @@ public abstract class Bus extends Vehicle {
         drawingBrush.fillText(text, centerX, labelY);
 
         drawingBrush.restore();
-    }
-
-    /**
-     * Returns the image file name for this bus subclass's icon.
-     *
-     * @return icon file name
-     */
-    public abstract String getIconFileName();
-
-    /**
-     * Locates, loads, scales, and tints this bus's icon image with {@link #getColor()}.
-     *
-     * @param iconDir       configured icon directory path (may include quotes or be {@code null})
-     * @param workingFolder fallback working directory to search if not found in {@code iconDir}
-     * @param size          target width/height in pixels (aspect ratio preserved)
-     * @return tinted {@link Image}, or {@code null} if missing or unreadable
-     */
-    public Image makeBusIcon(String iconDir, File workingFolder, int size) {
-        String fileName = getIconFileName();
-
-        File file = findFile(fileName, iconDir, workingFolder);
-        if (file == null) {
-            System.out.println("Icon not found " + fileName);
-            return null;
-        }
-
-        Image picture;
-        try (InputStream stream = new FileInputStream(file)) {
-            picture = new Image(stream, size, size, true, true);
-        } catch (IOException e) {
-            return null;
-        }
-
-        if (picture.isError()) {
-            return null;
-        }
-
-        return paintBus(picture, getColor());
-    }
-
-    /**
-     * Flood-fills transparent exterior pixels from the image border so interior/body pixels can be
-     * recolored with {@code busColor} while preserving anti-aliased edge shading and transparency.
-     *
-     * @param picture  source icon {@link Image}
-     * @param busColor target tint {@link Color}
-     * @return newly created tinted {@link WritableImage}
-     */
-    private Image paintBus(Image picture, Color busColor) {
-        int width = (int) picture.getWidth();
-        int height = (int) picture.getHeight();
-        int totalPixels = width * height;
-        int[] pixels = new int[totalPixels];
-
-        picture.getPixelReader().getPixels(0, 0, width, height, PixelFormat.getIntArgbInstance(), pixels, 0, width);
-
-        boolean[] outside = new boolean[totalPixels];
-        int[] toVisit = new int[totalPixels];
-        int toVisitCount = 0;
-
-        // Seed flood fill from semi-/fully transparent border pixels
-        for (int i = 0; i < totalPixels; i++) {
-            int x = i % width;
-            int y = i / width;
-
-            boolean onBorder = (x == 0 || y == 0 || x == width - 1 || y == height - 1);
-
-            if (onBorder && alphaOf(pixels[i]) < 128) {
-                outside[i] = true;
-                toVisit[toVisitCount++] = i;
-            }
-        }
-
-        // Propagate exterior mask across connected low-alpha pixels in 4-neighborhood
-        while (toVisitCount > 0) {
-            int i = toVisit[--toVisitCount];
-            int x = i % width;
-            int y = i / width;
-            int next;
-
-            next = i - 1;
-            if (x > 0 && !outside[next] && alphaOf(pixels[next]) < 128) {
-                outside[next] = true;
-                toVisit[toVisitCount++] = next;
-            }
-
-            next = i + 1;
-            if (x < width - 1 && !outside[next] && alphaOf(pixels[next]) < 128) {
-                outside[next] = true;
-                toVisit[toVisitCount++] = next;
-            }
-
-            next = i - width;
-            if (y > 0 && !outside[next] && alphaOf(pixels[next]) < 128) {
-                outside[next] = true;
-                toVisit[toVisitCount++] = next;
-            }
-
-            next = i + width;
-            if (y < height - 1 && !outside[next] && alphaOf(pixels[next]) < 128) {
-                outside[next] = true;
-                toVisit[toVisitCount++] = next;
-            }
-        }
-
-        int[] painted = new int[totalPixels];
-        for (int i = 0; i < totalPixels; i++) {
-            int x = i % width;
-            int y = i / width;
-            int alpha = alphaOf(pixels[i]);
-
-            boolean touchesOutside = (x > 0 && outside[i - 1] || (x < width - 1 && outside[i + 1])
-                    || (y > 0 && outside[i - width]) || (y < height - 1 && outside[i + width]));
-
-            int newAlpha;
-            double shade;
-            if (outside[i] || touchesOutside) {
-                // Keep exterior and outer edge anti-aliasing transparent
-                newAlpha = alpha;
-                shade = 1;
-            } else {
-                // Solidify interior pixels and modulate brightness by original alpha
-                newAlpha = 255;
-                shade = alpha / 255.0;
-            }
-
-            int red = (int) (busColor.getRed() * shade * 255);
-            int green = (int) (busColor.getGreen() * shade * 255);
-            int blue = (int) (busColor.getBlue() * shade * 255);
-            painted[i] = (newAlpha << 24) | (red << 16) | (green << 8) | blue;
-        }
-
-        WritableImage result = new WritableImage(width, height);
-        result.getPixelWriter().setPixels(0, 0, width, height, PixelFormat.getIntArgbInstance(), painted, 0, width);
-        return result;
-    }
-
-    /**
-     * Extracts the 8-bit alpha channel ({@code 0..255}) from an ARGB packed integer pixel.
-     *
-     * @param pixel packed ARGB pixel value
-     * @return alpha component in {@code [0, 255]}
-     */
-    private int alphaOf(int pixel) {
-        return (pixel >>> 24) & 255;
-    }
-
-    /**
-     * Searches for {@code fileName} in {@code iconDir}, then {@code workingFolder}, and finally up to
-     * 4 levels deep inside {@code workingFolder}.
-     *
-     * @param fileName      target file name
-     * @param iconDir       primary directory path (may be {@code null})
-     * @param workingFolder fallback root folder (may be {@code null})
-     * @return resolved {@link File}, or {@code null} if not found
-     */
-    private File findFile(String fileName, String iconDir, File workingFolder) {
-        if (iconDir != null) {
-            File folder = new File(iconDir.replace("\"", ""));
-            File file = new File(folder, fileName);
-            if (file.isFile()) {
-                return file;
-            }
-        }
-
-        if (workingFolder != null) {
-            File rootFile = new File(workingFolder, fileName);
-            if (rootFile.isFile()) {
-                return rootFile;
-            }
-
-            File found = searchFolder(workingFolder, fileName, 4);
-            if (found != null) {
-                return found;
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Recursively searches {@code folder} up to {@code depthLeft} subdirectories for a file matching
-     * {@code fileName} (case-insensitive), skipping hidden/dot directories.
-     *
-     * @param folder    directory to search
-     * @param fileName  target file name
-     * @param depthLeft remaining recursion depth
-     * @return matching {@link File}, or {@code null} if not found within depth limit
-     */
-    private File searchFolder(File folder, String fileName, int depthLeft) {
-        File[] items = (folder == null) ? null : folder.listFiles();
-
-        if (items == null || depthLeft < 0) {
-            return null;
-        }
-
-        for (File item : items) {
-            if (item.isFile() && item.getName().equalsIgnoreCase(fileName)) {
-                return item;
-            }
-        }
-
-        for (File item : items) {
-            if (item.isDirectory() && !item.getName().startsWith(".")) {
-                File found = searchFolder(item, fileName, depthLeft - 1);
-
-                if (found != null) {
-                    return found;
-                }
-            }
-        }
-
-        return null;
     }
 
     /**
@@ -454,10 +343,6 @@ public abstract class Bus extends Vehicle {
                           double shift,
                           DoubleUnaryOperator toScreenX,
                           DoubleUnaryOperator toScreenY) {
-        if (route == null || route.isEmpty()) {
-            return;
-        }
-
         drawingBrush.save();
         drawingBrush.setLineCap(StrokeLineCap.ROUND);
         drawingBrush.setLineWidth(lineWidth * 0.5);
