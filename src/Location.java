@@ -1,13 +1,14 @@
 /**
  * <p><b>Project Name:</b> Bus Rerouting</p>
  * <p><b>Class Name:</b> Location</p>
- * <p><b>Purpose:</b> Represents a 2D coordinate point and calculates distance between locations.</p>
+ * <p><b>Purpose:</b> Represents a 2D coordinate point, compares two locations for equality, and
+ * calculates distance between locations.</p>
  *
  * @author Ahmad Balfakeeh
  * @author Abdullah Balubaid
  * @author Salam Kanno
  * @author Omar AbuSabaah
- * @version v1.2 11/25/26
+ * @version v1.3 11/25/26
  */
 public class Location {
     private double positionX;   // Horizontal 2D coordinate
@@ -19,7 +20,7 @@ public class Location {
      * @param X initial horizontal coordinate
      * @param Y initial vertical coordinate
      */
-    Location(double X, double Y) {
+    public Location(double X, double Y) {
         positionX = X;
         positionY = Y;
     }
@@ -69,26 +70,40 @@ public class Location {
     }
 
     /**
-     * Computes the Euclidean distance from this location to another {@code Location}.
+     * Computes the grid (Manhattan) distance from this location to another {@code Location}. Buses
+     * drive along grid lines (first along X, then along Y), so this is the distance they really travel.
      *
      * @param location target location (must not be {@code null})
-     * @return straight-line distance between this location and {@code location}
+     * @return {@code |dx| + |dy|} between this location and {@code location}
      * @throws IllegalArgumentException if {@code location} is {@code null}
      */
-    public double distanceTo(Location location) {
+    public double gridDistanceTo(Location location) {
         if (location == null) {
             throw new IllegalArgumentException("Target location must not be null.");
         }
 
-        double x2 = location.getX();
-        double y2 = location.getY();
-        double x1 = getX();
-        double y1 = getY();
+        return Math.abs(location.getX() - getX()) + Math.abs(location.getY() - getY());
+    }
 
-        // Standard 2D Euclidean distance formula: sqrt((x2 - x1)^2 + (y2 - y1)^2)
-        double distance = Math.sqrt(Math.pow((x2 - x1), 2) + Math.pow((y2 - y1), 2));
+    /**
+     * Checks whether another object is a {@code Location} with exactly the same coordinates. This
+     * replaces the repeated {@code x == x && y == y} comparisons that used to be written out by hand.
+     *
+     * @param other the object to compare against
+     * @return {@code true} if {@code other} is a {@code Location} at the same X and Y
+     */
+    @Override
+    public boolean equals(Object other) {
+        if (this == other) {
+            return true;
+        }
 
-        return distance;
+        if (!(other instanceof Location)) {
+            return false;
+        }
+
+        Location otherLocation = (Location) other;
+        return getX() == otherLocation.getX() && getY() == otherLocation.getY();
     }
 
     /**

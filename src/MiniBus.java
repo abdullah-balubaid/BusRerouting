@@ -4,26 +4,31 @@ import java.util.ArrayList;
 /**
  * <p><b>Project Name:</b> Bus Rerouting</p>
  * <p><b>Class Name:</b> MiniBus</p>
- * <p><b>Purpose:</b> Represents a compact 15-passenger bus (speed 35, prefix {@code "M"})
- * capable of dynamic rerouting with a lower per-minute operating cost.</p>
+ * <p><b>Purpose:</b> Represents a compact 15-passenger bus (42 km/h, prefix {@code "M"})
+ * capable of dynamic rerouting with a lower cost per grid cell driven.</p>
  *
  * @author Ahmad Balfakeeh
  * @author Abdullah Balubaid
  * @author Salam Kanno
  * @author Omar AbuSabaah
- * @version v1.3 11/25/26
+ * @version v1.5 11/26/26
  */
 public class MiniBus extends Bus implements Reroutable {
+    /** Name of this kind of bus, as shown in menus and saved builds. */
+    public static final String TYPE_NAME = "Mini Bus";
+    private static final String ICON_FILE = "MiniBusIcon.png";    // Picture of this kind of bus
+    private static final double COST_PER_KM = 2.5;   // Cheaper to run than a standard bus
+    private static final int SPEED_KMH = 42;   // Smaller, so quicker through traffic
 
     /**
-     * Constructs a {@code MiniBus} with a capacity of 15 passengers, speed of 35,
+     * Constructs a {@code MiniBus} with a capacity of 15 passengers, speed of 42 km/h,
      * prefix {@code "M"}, the given display color, and the specified route.
      *
      * @param color display/tinting color of the bus
      * @param route list of {@link Location} stops along the bus's route
      */
     public MiniBus(Color color, ArrayList<Location> route) {
-        super(15, 35, color, route, "M");
+        super(15, SPEED_KMH, color, route, "M", COST_PER_KM, new Icon(ICON_FILE, 1.0, color));
     }
 
     /**
@@ -35,31 +40,16 @@ public class MiniBus extends Bus implements Reroutable {
      */
     @Override
     public void reRoute(Location newDestination) {
-        // Guard against rerouting when no route stops exist to return to afterward
-        if (route == null || route.isEmpty()) {
-            throw new IllegalArgumentException("New route must not be null or empty.");
-        }
         updateDestination(newDestination);
     }
 
     /**
-     * Returns the image file name used for rendering a mini-bus icon.
+     * Returns the name of this kind of bus.
      *
-     * @return {@code "MiniBusIcon.png"}
+     * @return {@code "Mini Bus"}
      */
     @Override
-    public String getIconFileName() {
-        return "MiniBusIcon.png";
-    }
-
-    /**
-     * Returns the operating cost incurred per simulated minute for running a mini-bus.
-     *
-     * @return operating cost per simulated minute ({@code 0.6})
-     */
-    // note 1: lower per-minute cost reflecting smaller capacity
-    @Override
-    public double getOperatingCostPerMinute() {
-        return 0.6;
+    public String getTypeName() {
+        return TYPE_NAME;
     }
 }

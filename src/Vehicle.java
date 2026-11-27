@@ -3,29 +3,28 @@ import javafx.scene.paint.Color;
 /**
  * <p><b>Project Name:</b> Bus Rerouting</p>
  * <p><b>Class Name:</b> Vehicle</p>
- * <p><b>Purpose:</b> Abstract base class representing a vehicle with capacity, speed, color,
- * passenger count, and grid movement state.</p>
+ * <p><b>Purpose:</b> Abstract map item representing a vehicle with capacity, speed, color,
+ * passenger count, grid movement state, and the total distance it has driven.</p>
  *
  * @author Ahmad Balfakeeh
  * @author Abdullah Balubaid
  * @author Salam Kanno
  * @author Omar AbuSabaah
- * @version v1.3 11/25/26
+ * @version v1.4 11/25/26
  */
-public abstract class Vehicle {
+public abstract class Vehicle extends MapItem {
     private final int PASSENGER_CAPACITY;                         // Maximum number of passengers the vehicle can hold
     private final int SPEED;                                      // Vehicle speed rating
-    private Color color;                                          // Display/tinting color of the vehicle
-    private boolean isMoving = false;                             // True when current location differs from destination
+    private final Color color;                                          // Display/tinting color of the vehicle
     private int currentPassengers = 0;                            // Current number of passengers aboard
-    private Location currentLocation = new Location(0, 0);        // Current grid position of the vehicle
     private Location Destination = new Location(0, 0);            // Target grid destination of the vehicle
+    private double distanceTravelled = 0;                         // Total grid distance driven since the last reset
 
     /**
      * Constructs a {@code Vehicle} with validated capacity, speed, and color.
      *
      * @param Capacity total passenger seating capacity (must be positive)
-     * @param Speed    movement speed rating (must be positive)
+     * @param Speed    driving speed in km/h (must be positive)
      * @param color    vehicle color (must not be {@code null})
      * @throws IllegalArgumentException if {@code Capacity} or {@code Speed} is less than or equal to 0
      * @throws NullPointerException     if {@code color} is {@code null}
@@ -45,21 +44,12 @@ public abstract class Vehicle {
     }
 
     /**
-     * Checks whether the vehicle currently has zero passengers.
-     *
-     * @return {@code true} if no passengers are aboard, {@code false} otherwise
-     */
-    public boolean isEmpty() {
-        return currentPassengers == 0;
-    }
-
-    /**
      * Checks whether the vehicle is currently moving toward its destination.
      *
      * @return {@code true} if moving, {@code false} otherwise
      */
     public boolean isMoving() {
-        return isMoving;
+        return !isAt(Destination);
     }
 
     /**
@@ -78,20 +68,7 @@ public abstract class Vehicle {
      * @param newLocation the new grid position
      */
     public void updateLocation(Location newLocation) {
-        currentLocation.updateLocation(newLocation);
-        updateMoving();
-    }
-
-    /**
-     * Updates the vehicle's current location using explicit X and Y coordinates and refreshes
-     * its movement state.
-     *
-     * @param x new X coordinate
-     * @param y new Y coordinate
-     */
-    public void updateLocation(double x, double y) {
-        currentLocation.updateLocation(x, y);
-        updateMoving();
+        setLocation(newLocation);
     }
 
     /**
@@ -102,43 +79,19 @@ public abstract class Vehicle {
      */
     public void updateDestination(Location newDestination) {
         Destination.updateLocation(newDestination);
-        updateMoving();
     }
 
     /**
-     * Updates the vehicle's target destination using explicit X and Y coordinates and refreshes
-     * its movement state.
-     *
-     * @param x target X coordinate
-     * @param y target Y coordinate
-     */
-    public void updateDestination(double x, double y) {
-        Destination.updateLocation(x, y);
-        updateMoving();
-    }
-
-    /**
-     * Sets the current number of passengers aboard if within {@code [0, PASSENGER_CAPACITY]};
-     * otherwise prints a validation message without changing the count.
+     * Sets the current number of passengers aboard.
      *
      * @param Passengers desired passenger count
+     * @throws IllegalArgumentException if the count is negative or more than the capacity
      */
     public void setCurrentPassengers(int Passengers) {
-        if (Passengers <= PASSENGER_CAPACITY && Passengers >= 0) {
-            currentPassengers = Passengers;
-        } else if (Passengers > PASSENGER_CAPACITY) {
-            System.out.println("The vehicle is overfilled.");
-        } else {
-            System.out.println("Invalid number of passengers.");
+        if (Passengers > PASSENGER_CAPACITY || Passengers < 0) {
+            throw new IllegalArgumentException("A " + PASSENGER_CAPACITY + "-passenger vehicle cannot hold " + Passengers + " passengers.");
         }
-    }
-
-    /**
-     * Recomputes {@link #isMoving} by comparing {@link #currentLocation} against {@link #Destination}.
-     */
-    public void updateMoving() {
-        isMoving = currentLocation.getX() != Destination.getX()
-                || currentLocation.getY() != Destination.getY();
+        currentPassengers = Passengers;
     }
 
     /**
@@ -151,9 +104,9 @@ public abstract class Vehicle {
     }
 
     /**
-     * Returns the vehicle's speed rating.
+     * Returns the vehicle's driving speed in km/h.
      *
-     * @return speed rating
+     * @return speed in km/h
      */
     public int getSpeed() {
         return SPEED;
@@ -178,15 +131,6 @@ public abstract class Vehicle {
     }
 
     /**
-     * Returns a defensive copy of the vehicle's current location.
-     *
-     * @return copy of {@link #currentLocation}
-     */
-    public Location getCurrentLocation() {
-        return new Location(currentLocation.getX(), currentLocation.getY());
-    }
-
-    /**
      * Returns a defensive copy of the vehicle's current destination.
      *
      * @return copy of {@link #Destination}
@@ -196,13 +140,30 @@ public abstract class Vehicle {
     }
 
     /**
+     * Returns the total grid distance this vehicle has driven since {@link #resetDistanceTravelled()}.
+     *
+     * @return distance travelled in grid cells
+     */
+    public double getDistanceTravelled() {
+        return distanceTravelled;
+    }
+
+    /**
+     * Sets the distance driven back to zero, called when a new simulation run starts.
+     */
+    public void resetDistanceTravelled() {
+        distanceTravelled = 0;
+    }
+
+    /**
      * Moves the vehicle along grid axes toward its destination by up to {@code distance} grid units
-     * (first along X, then using any remaining distance along Y), clamping at the target.
+     * (first along X, then using any remaining distance along Y), clamping at the target. The
+     * distance actually driven is added to {@link #distanceTravelled}.
      *
      * @param distance maximum grid distance to travel in this step
      */
     public void moveTowardDestination(double distance) {
-        Location current = getCurrentLocation();
+        Location current = getLocation();
         Location target = getDestination();
         double x = current.getX();
         double y = current.getY();
@@ -227,6 +188,7 @@ public abstract class Vehicle {
             y = y + Math.signum(differenceY) * stepY;
         }
 
-        updateLocation(x, y);
+        distanceTravelled += stepX + stepY;
+        setLocation(x, y);
     }
 }
